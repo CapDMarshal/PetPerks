@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-
-void main() {
-  runApp(const WishlistApp());
-}
+import 'package:petperks/category/search_screen.dart'; 
+import 'package:petperks/cart/cart_screen.dart';
 
 // ====================================================================
 // MODEL DATA 📚
@@ -17,12 +15,7 @@ class Product {
   final String category;
 
   const Product({
-    required this.id,
-    required this.name,
-    required this.imageUrl,
-    required this.price,
-    required this.oldPrice,
-    required this.category,
+    required this.id, required this.name, required this.imageUrl, required this.price, required this.oldPrice, required this.category,
   });
 }
 
@@ -39,45 +32,45 @@ class ProductDetail {
   final String description;
 
   const ProductDetail({
-    required this.title,
-    required this.category,
-    required this.rating,
-    required this.reviews,
-    required this.price,
-    required this.oldPrice,
-    required this.imageUrls,
-    required this.availableSizes,
-    required this.availableColors,
-    required this.description,
+    required this.title, required this.category, required this.rating, required this.reviews, required this.price, 
+    required this.oldPrice, required this.imageUrls, required this.availableSizes, required this.availableColors, required this.description,
   });
 }
 
-// Data dummy produk wishlist
+// Data dummy dengan path assets yang sudah diperbarui
 final List<Product> dummyWishlist = [
-  const Product(id: 'p1', name: 'Dog Body Belt', imageUrl: 'assets/body_belt.png', price: 80.00, oldPrice: 95.00, category: 'Body Belt'),
-  const Product(id: 'p2', name: 'Dog Cloths', imageUrl: 'assets/dog_cloths.png', price: 80.00, oldPrice: 95.00, category: 'Dog Cloths'),
-  const Product(id: 'p3', name: 'Pet Bed For Dog', imageUrl: 'assets/dog_bed.png', price: 80.00, oldPrice: 95.00, category: 'Ped Food'),
-  const Product(id: 'p4', name: 'Dog Chew Toys (Red)', imageUrl: 'assets/chew_toys_red.png', price: 80.00, oldPrice: 95.00, category: 'Ball'),
-  const Product(id: 'p5', name: 'Dog Body Belt (Yellow)', imageUrl: 'assets/dog_on_pillow.png', price: 80.00, oldPrice: 95.00, category: 'Body Belt'),
-  const Product(id: 'p6', name: 'Dog Ball (Green)', imageUrl: 'assets/green_ball.png', price: 80.00, oldPrice: 95.00, category: 'Ball'),
+  const Product(id: 'p1', name: 'Dog Body Belt', imageUrl: 'assets/belt.jpg', price: 80.00, oldPrice: 95.00, category: 'Body Belt'),
+  const Product(id: 'p2', name: 'Dog Cloths', imageUrl: 'assets/cloths.jpg', price: 80.00, oldPrice: 95.00, category: 'Dog Cloths'),
+  const Product(id: 'p3', name: 'Pet Bed For Dog', imageUrl: 'assets/bed_product.jpg', price: 80.00, oldPrice: 95.00, category: 'Ped Food'),
+  const Product(id: 'p4', name: 'Dog Chew Toys (Bone)', imageUrl: 'assets/chew_toys.jpg', price: 80.00, oldPrice: 95.00, category: 'Ball'),
+  const Product(id: 'p5', name: 'Dog Pillow', imageUrl: 'assets/pillow.jpg', price: 80.00, oldPrice: 95.00, category: 'Body Belt'),
+  const Product(id: 'p6', name: 'Dog Ball (Green)', imageUrl: 'assets/chew_toys_product.jpg', price: 80.00, oldPrice: 95.00, category: 'Ball'),
 ];
 
-// Data detail dummy produk (digunakan untuk semua detail screen untuk demo)
 const ProductDetail dummyDetailData = ProductDetail(
-  title: 'Fashionable Canines: Dog Clothes for Every Season',
-  category: 'Cloth',
-  rating: 4.5,
-  reviews: 470,
-  price: 270.00,
-  oldPrice: 310.00,
-  imageUrls: ['assets/img_1.png', 'assets/img_2.png', 'assets/img_3.png', ],
+  title: 'Fashionable Canines: Dog Clothes for Every Season', category: 'Cloth', rating: 4.5, reviews: 470, price: 270.00, oldPrice: 310.00,
+  imageUrls: ['assets/cloths_product.jpg', 'assets/belt_product.jpg', 'assets/chew_toys_product.jpg', ],
   availableSizes: ['S', 'M', 'L', 'XL', '2XI'],
   availableColors: [Color(0xFF8B0000), Color(0xFFD2B48C), Color(0xFF808080), Color(0xFF9932CC), Color(0xFF6B8E23), ],
   description: 'There are many variations of passages of Lorem Ipsum available, but the majority have suffered alteration in some form, by injected humor.',
 );
 
 // ====================================================================
-// APLIKASI UTAMA
+// FUNGSI NAVIGASI GLOBAL 🛒
+// ====================================================================
+
+// Fungsi bantu untuk navigasi ke CartScreen
+void _navigateToCartScreen(BuildContext context) {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => const CartScreen(), 
+    ),
+  );
+}
+
+// ====================================================================
+// APLIKASI UTAMA & WISHLIST SCREEN
 // ====================================================================
 
 class WishlistApp extends StatelessWidget {
@@ -88,18 +81,11 @@ class WishlistApp extends StatelessWidget {
     return MaterialApp(
       title: 'Wishlist Demo',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-      ),
+      theme: ThemeData(primarySwatch: Colors.blue, visualDensity: VisualDensity.adaptivePlatformDensity,),
       home: const WishlistScreen(),
     );
   }
 }
-
-// ====================================================================
-// WISHLIST SCREEN (HEADER, TABS, FILTERING & GRID) 🌟
-// ====================================================================
 
 class WishlistScreen extends StatefulWidget {
   const WishlistScreen({super.key});
@@ -111,40 +97,29 @@ class WishlistScreen extends StatefulWidget {
 class _WishlistScreenState extends State<WishlistScreen> {
   List<Product> wishlistItems = List.from(dummyWishlist);
   String _selectedCategory = 'All';
-
   final List<String> _categories = ['All', 'Body Belt', 'Ped Food', 'Dog Cloths', 'Ball'];
 
-  void _changeCategory(String category) {
-    setState(() {
-      _selectedCategory = category;
-    });
-  }
-
+  void _changeCategory(String category) { setState(() { _selectedCategory = category; }); }
   List<Product> _getFilteredProducts() {
-    if (_selectedCategory == 'All') {
-      return wishlistItems;
-    } else {
-      return wishlistItems.where((item) => item.category == _selectedCategory).toList();
-    }
+    if (_selectedCategory == 'All') { return wishlistItems; } 
+    return wishlistItems.where((item) => item.category == _selectedCategory).toList();
   }
-
   void _removeItem(String productId) {
-    setState(() {
-      wishlistItems.removeWhere((item) => item.id == productId);
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Item dihapus dari Wishlist!')),
-    );
+    setState(() { wishlistItems.removeWhere((item) => item.id == productId); });
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Item dihapus dari Wishlist!')));
   }
-
+  
+  // Fungsi ini sekarang tidak lagi berisi navigasi, navigasi diurus di ProductCard
   void _addToCart(String productId) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Item ditambahkan ke Keranjang!')),
-    );
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Item ditambahkan ke Keranjang!')));
   }
 
   double _calculateTotal() {
     return wishlistItems.fold(0.0, (sum, item) => sum + item.price);
+  }
+
+  void _navigateToSearchScreen(BuildContext context) {
+    Navigator.push(context, MaterialPageRoute(builder: (context) => const SearchScreen(),));
   }
 
   @override
@@ -159,7 +134,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildWishlistHeader(totalItems, totalPrice),
+          _buildWishlistHeader(context, totalItems, totalPrice),
           _buildCategoryTabs(),
           const Divider(height: 1, color: Color(0xFFE0E0E0)),
           Expanded(
@@ -167,19 +142,10 @@ class _WishlistScreenState extends State<WishlistScreen> {
               padding: const EdgeInsets.all(8.0),
               child: GridView.builder(
                 itemCount: filteredProducts.length,
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  childAspectRatio: 0.7,
-                  crossAxisSpacing: 10,
-                  mainAxisSpacing: 10,
-                ),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, childAspectRatio: 0.7, crossAxisSpacing: 10, mainAxisSpacing: 10,),
                 itemBuilder: (context, index) {
                   final product = filteredProducts[index];
-                  return ProductCard(
-                    product: product,
-                    onRemove: () => _removeItem(product.id),
-                    onAddToCart: () => _addToCart(product.id),
-                  );
+                  return ProductCard(product: product, onRemove: () => _removeItem(product.id), onAddToCart: () => _addToCart(product.id));
                 },
               ),
             ),
@@ -189,7 +155,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
     );
   }
 
-  Widget _buildWishlistHeader(int itemCount, double total) {
+  Widget _buildWishlistHeader(BuildContext context, int itemCount, double total) {
     return Padding(
       padding: const EdgeInsets.only(left: 16.0, right: 8.0, top: 16.0, bottom: 8.0),
       child: Column(
@@ -199,14 +165,11 @@ class _WishlistScreenState extends State<WishlistScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text('Wishlist', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
-              IconButton(icon: const Icon(Icons.search, size: 28), onPressed: () {}),
+              IconButton(icon: const Icon(Icons.search, size: 28), onPressed: () => _navigateToSearchScreen(context)),
             ],
           ),
           const SizedBox(height: 4),
-          Text(
-            '$itemCount Items • Total: \$${total.toStringAsFixed(0)}',
-            style: const TextStyle(fontSize: 14, color: Colors.grey, fontWeight: FontWeight.w500),
-          ),
+          Text('$itemCount Items • Total: \$${total.toStringAsFixed(0)}', style: const TextStyle(fontSize: 14, color: Colors.grey, fontWeight: FontWeight.w500)),
         ],
       ),
     );
@@ -218,11 +181,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       child: Row(
         children: _categories.map((title) {
-          return _buildTab(
-            title,
-            title == _selectedCategory,
-            () => _changeCategory(title),
-          );
+          return _buildTab(title, title == _selectedCategory, () => _changeCategory(title));
         }).toList(),
       ),
     );
@@ -241,14 +200,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: Colors.black),
           ),
-          child: Text(
-            title,
-            style: TextStyle(
-              color: isActive ? Colors.white : Colors.black,
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-            ),
-          ),
+          child: Text(title, style: TextStyle(color: isActive ? Colors.white : Colors.black, fontWeight: FontWeight.bold, fontSize: 14)),
         ),
       ),
     );
@@ -256,7 +208,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
 }
 
 // ====================================================================
-// PRODUCT CARD (ITEM DI GRID)
+// PRODUCT CARD & DETAIL SCREEN
 // ====================================================================
 
 class ProductCard extends StatelessWidget {
@@ -264,15 +216,9 @@ class ProductCard extends StatelessWidget {
   final VoidCallback onRemove;
   final VoidCallback onAddToCart;
 
-  const ProductCard({
-    required this.product,
-    required this.onRemove,
-    required this.onAddToCart,
-    super.key,
-  });
+  const ProductCard({required this.product, required this.onRemove, required this.onAddToCart, super.key,});
 
   void _navigateToDetailScreen(BuildContext context) {
-    // Navigasi ke ProductDetailScreen
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -284,39 +230,25 @@ class ProductCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: () => _navigateToDetailScreen(context), // Navigasi saat di-tap
+      onTap: () => _navigateToDetailScreen(context),
       child: Card(
         elevation: 0,
         margin: EdgeInsets.zero,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-          side: BorderSide(color: Colors.grey.shade200),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: BorderSide(color: Colors.grey.shade200)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: Stack(
-                alignment: Alignment.topRight,
-                children: [
-                  Center(
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      width: double.infinity,
-                      child: const Icon(Icons.pets, size: 60, color: Colors.grey),
-                    ),
-                  ),
-                  Positioned(
-                    top: 0,
-                    right: 0,
-                    child: IconButton(
-                      icon: const Icon(Icons.close, color: Colors.grey),
-                      onPressed: onRemove,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            Expanded(child: Stack(
+              alignment: Alignment.topRight,
+              children: [
+                Center(child: Container(
+                  padding: const EdgeInsets.all(16), 
+                  width: double.infinity, 
+                  child: Image.asset(product.imageUrl, fit: BoxFit.contain), 
+                )),
+                Positioned(top: 0, right: 0, child: IconButton(icon: const Icon(Icons.close, color: Colors.grey), onPressed: onRemove)),
+              ],
+            )),
             Padding(
               padding: const EdgeInsets.only(left: 8.0, right: 8.0, bottom: 4.0),
               child: Column(
@@ -338,11 +270,12 @@ class ProductCard extends StatelessWidget {
               alignment: Alignment.bottomRight,
               child: IconButton(
                 icon: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(4)),
-                  child: const Icon(Icons.shopping_cart_outlined, color: Colors.white, size: 20),
+                  padding: const EdgeInsets.all(4), 
+                  decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(4)), 
+                  child: const Icon(Icons.shopping_cart_outlined, color: Colors.white, size: 20)
                 ),
-                onPressed: onAddToCart,
+                // PERUBAHAN 1: Navigasi ke CartScreen dari Product Card
+                onPressed: () => _navigateToCartScreen(context), 
               ),
             ),
             const SizedBox(height: 4),
@@ -352,11 +285,6 @@ class ProductCard extends StatelessWidget {
     );
   }
 }
-
-
-// ====================================================================
-// PRODUCT DETAIL SCREEN (LAYAR PENUH) ✅
-// ====================================================================
 
 class ProductDetailScreen extends StatelessWidget {
   final ProductDetail details;
@@ -370,29 +298,18 @@ class ProductDetailScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        // Tombol Kembali
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
-          onPressed: () => Navigator.of(context).pop(), // Kembali ke screen sebelumnya
-        ),
+        leading: IconButton(icon: const Icon(Icons.arrow_back_ios, color: Colors.black), onPressed: () => Navigator.of(context).pop()),
         title: const Text('Product Details', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
         centerTitle: true,
         actions: [
-          // Tombol Keranjang dengan Badge
           Stack(
             alignment: Alignment.topRight,
             children: [
-              IconButton(
-                icon: const Icon(Icons.shopping_cart_outlined, color: Colors.black, size: 28),
-                onPressed: () { /* Aksi ke keranjang */ },
-              ),
+              // PERUBAHAN 2: Navigasi ke CartScreen dari AppBar Detail
+              IconButton(icon: const Icon(Icons.shopping_cart_outlined, color: Colors.black, size: 28), onPressed: () => _navigateToCartScreen(context)), 
               Container(
                 padding: const EdgeInsets.all(3),
-                decoration: BoxDecoration(
-                  color: Colors.red,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.white, width: 1.5)
-                ),
+                decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(10), border: Border.all(color: Colors.white, width: 1.5)),
                 constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
                 child: const Text('14', style: TextStyle(color: Colors.white, fontSize: 10), textAlign: TextAlign.center),
               ),
@@ -402,14 +319,27 @@ class ProductDetailScreen extends StatelessWidget {
         ],
       ),
       body: ProductDetailContent(details: details),
-      // Anda bisa menambahkan tombol "Add to Cart" tetap di bawah di sini (jika diinginkan)
+      // PERUBAHAN 3: Menambahkan tombol "Add to Cart" di bottomNavigationBar
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.only(left: 16.0, right: 16.0, bottom: 16.0),
+        child: ElevatedButton(
+          onPressed: () {
+            // Memberi feedback bahwa produk ditambahkan
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Produk ditambahkan ke Keranjang!')));
+            // Navigasi ke CartScreen
+            _navigateToCartScreen(context);
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.black,
+            minimumSize: const Size(double.infinity, 50),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+          child: const Text('Add to Cart', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+        ),
+      ),
     );
   }
 }
-
-// ====================================================================
-// PRODUCT DETAIL CONTENT (KONTEN DETAIL DENGAN STATE)
-// ====================================================================
 
 class ProductDetailContent extends StatefulWidget {
   final ProductDetail details;
@@ -436,7 +366,7 @@ class _ProductDetailContentState extends State<ProductDetailContent> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildImageGallery(context, details.imageUrls),
+          _buildImageGallery(context, details.imageUrls), 
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -451,6 +381,7 @@ class _ProductDetailContentState extends State<ProductDetailContent> {
                 _buildColorOptions(details.availableColors),
                 const SizedBox(height: 20),
                 _buildDescription(details.description),
+                const SizedBox(height: 100), // Memberi ruang agar tombol Add to Cart di bottomBar tidak tertutup
               ],
             ),
           ),
@@ -461,39 +392,32 @@ class _ProductDetailContentState extends State<ProductDetailContent> {
   
   Widget _buildImageGallery(BuildContext context, List<String> imageUrls) {
     return SizedBox(
-      height: MediaQuery.of(context).size.height * 0.45,
+      height: MediaQuery.of(context).size.height * 0.45, 
       child: Stack(
         alignment: Alignment.topRight,
         children: [
           PageView.builder(
             itemCount: imageUrls.length,
-            itemBuilder: (context, index) {
+            itemBuilder: (context, index) { 
               return Container(
-                alignment: Alignment.center,
-                color: const Color(0xFFE0F7FA),
-                child: const Icon(Icons.pets, size: 150, color: Colors.blueGrey),
+                alignment: Alignment.center, 
+                color: Colors.transparent, // Warna latar belakang dihapus
+                child: Image.asset(imageUrls[index], fit: BoxFit.contain), // BoxFit.contain untuk fit
               );
             },
           ),
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4)]
-              ),
-              child: IconButton(
-                icon: const Icon(Icons.favorite_border, color: Colors.grey),
-                onPressed: () { /* Aksi Wishlist */ },
-              ),
+              decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4)]),
+              child: IconButton(icon: const Icon(Icons.favorite_border, color: Colors.grey), onPressed: () {}),
             ),
           ),
         ],
       ),
     );
   }
-
+  
   Widget _buildTitleAndRating(ProductDetail details) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -503,11 +427,7 @@ class _ProductDetailContentState extends State<ProductDetailContent> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Expanded(child: Text(details.title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold))),
-            Row(children: [
-              const Icon(Icons.star, color: Colors.amber, size: 18),
-              const SizedBox(width: 4),
-              Text('${details.rating.toString()} (${details.reviews})', style: const TextStyle(fontSize: 14)),
-            ]),
+            Row(children: [const Icon(Icons.star, color: Colors.amber, size: 18), const SizedBox(width: 4), Text('${details.rating.toString()} (${details.reviews})', style: const TextStyle(fontSize: 14)),]),
           ],
         ),
       ],
@@ -519,35 +439,22 @@ class _ProductDetailContentState extends State<ProductDetailContent> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Price:', style: TextStyle(fontSize: 14, color: Colors.grey)),
-            Row(
-              children: [
-                Text('\$${details.price.toStringAsFixed(0)}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-                const SizedBox(width: 8),
-                Text('\$${details.oldPrice.toStringAsFixed(0)}', style: const TextStyle(fontSize: 16, color: Colors.grey, decoration: TextDecoration.lineThrough)),
-              ],
-            ),
-          ],
-        ),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Quantity:', style: TextStyle(fontSize: 14, color: Colors.grey)),
-            Row(
-              children: [
-                _buildQuantityButton(Icons.remove, _decrementQuantity),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                  child: Text('$_quantity', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                ),
-                _buildQuantityButton(Icons.add, _incrementQuantity),
-              ],
-            ),
-          ],
-        ),
+        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('Price:', style: TextStyle(fontSize: 14, color: Colors.grey)),
+          Row(children: [
+            Text('\$${details.price.toStringAsFixed(0)}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+            const SizedBox(width: 8),
+            Text('\$${details.oldPrice.toStringAsFixed(0)}', style: const TextStyle(fontSize: 16, color: Colors.grey, decoration: TextDecoration.lineThrough)),
+          ]),
+        ]),
+        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('Quantity:', style: TextStyle(fontSize: 14, color: Colors.grey)),
+          Row(children: [
+            _buildQuantityButton(Icons.remove, _decrementQuantity),
+            Padding(padding: const EdgeInsets.symmetric(horizontal: 12.0), child: Text('$_quantity', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold))),
+            _buildQuantityButton(Icons.add, _incrementQuantity),
+          ]),
+        ]),
       ],
     );
   }
@@ -555,14 +462,7 @@ class _ProductDetailContentState extends State<ProductDetailContent> {
   Widget _buildQuantityButton(IconData icon, VoidCallback onPressed) {
     return Container(
       decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: Colors.grey.shade300)),
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(20),
-        child: Padding(
-          padding: const EdgeInsets.all(4.0),
-          child: Icon(icon, size: 20, color: Colors.black),
-        ),
-      ),
+      child: InkWell(onTap: onPressed, borderRadius: BorderRadius.circular(20), child: Padding(padding: const EdgeInsets.all(4.0), child: Icon(icon, size: 20, color: Colors.black))),
     );
   }
 
@@ -572,23 +472,15 @@ class _ProductDetailContentState extends State<ProductDetailContent> {
       children: [
         const Text('Items Size:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         const SizedBox(height: 10),
-        Row(
-          children: sizes.map((size) {
+        Row(children: sizes.map((size) {
             final isSelected = size == _selectedSize;
-            return Padding(
-              padding: const EdgeInsets.only(right: 8.0),
-              child: ChoiceChip(
-                label: Text(size),
-                selected: isSelected,
-                selectedColor: Colors.black,
+            return Padding(padding: const EdgeInsets.only(right: 8.0), child: ChoiceChip(
+                label: Text(size), selected: isSelected, selectedColor: Colors.black,
                 labelStyle: TextStyle(color: isSelected ? Colors.white : Colors.black, fontWeight: FontWeight.bold),
                 backgroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide(color: isSelected ? Colors.black : Colors.grey)),
-                onSelected: (selected) {
-                  if (selected) { setState(() { _selectedSize = size; }); }
-                },
-              ),
-            );
+                onSelected: (selected) { if (selected) { setState(() { _selectedSize = size; }); }},
+            ));
           }).toList(),
         ),
       ],
@@ -601,25 +493,16 @@ class _ProductDetailContentState extends State<ProductDetailContent> {
       children: [
         const Text('Items Color:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         const SizedBox(height: 10),
-        Row(
-          children: colors.map((color) {
+        Row(children: colors.map((color) {
             final isSelected = color == _selectedColor;
-            return Padding(
-              padding: const EdgeInsets.only(right: 12.0),
-              child: GestureDetector(
+            return Padding(padding: const EdgeInsets.only(right: 12.0), child: GestureDetector(
                 onTap: () { setState(() { _selectedColor = color; }); },
                 child: Container(
-                  width: 30,
-                  height: 30,
-                  decoration: BoxDecoration(
-                    color: color,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: isSelected ? Colors.black : Colors.transparent, width: 2),
-                  ),
+                  width: 30, height: 30,
+                  decoration: BoxDecoration(color: color, shape: BoxShape.circle, border: Border.all(color: isSelected ? Colors.black : Colors.transparent, width: 2)),
                   child: isSelected ? const Icon(Icons.check, color: Colors.white, size: 16) : null,
                 ),
-              ),
-            );
+            ));
           }).toList(),
         ),
       ],
