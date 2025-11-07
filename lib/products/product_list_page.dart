@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../search/search_screen.dart';
+import '../cart/cart_screen.dart';
 import 'widgets/product_item_card.dart';
 import 'widgets/product_list_row.dart'; 
 import 'widgets/gender_bottom_sheet.dart';
@@ -111,23 +113,33 @@ class _ProductListPageState extends State<ProductListPage> {
       backgroundColor: Colors.white,
       elevation: 0,
       leading: IconButton(icon: const Icon(Icons.arrow_back_ios, color: Colors.black, size: 20), onPressed: () => Navigator.pop(context)),
-      title: Container(
-        height: 40,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: Colors.grey.shade300),
-        ),
-        child: const TextField(
-          textAlignVertical: TextAlignVertical.center,
-          decoration: InputDecoration(
-            prefixIcon: Icon(Icons.search, color: Colors.grey, size: 20),
-            hintText: 'Search Product',
-            hintStyle: TextStyle(color: Colors.grey, fontSize: 14),
-            border: InputBorder.none,
-            isDense: true,
-            contentPadding: EdgeInsets.zero,
+      title: GestureDetector(
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => const SearchScreen(),
+            ),
+          );
+        },
+        child: Container(
+          height: 40,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
+          child: const TextField(
+            enabled: false,
+            textAlignVertical: TextAlignVertical.center,
+            decoration: InputDecoration(
+              prefixIcon: Icon(Icons.search, color: Colors.grey, size: 20),
+              hintText: 'Search Product',
+              hintStyle: TextStyle(color: Colors.grey, fontSize: 14),
+              border: InputBorder.none,
+              isDense: true,
+              contentPadding: EdgeInsets.zero,
+            ),
           ),
         ),
       ),
@@ -141,7 +153,16 @@ class _ProductListPageState extends State<ProductListPage> {
         ),
         Stack(
           children: [
-            IconButton(icon: const Icon(Icons.shopping_cart_outlined, color: Colors.black), onPressed: () {}),
+            IconButton(
+              icon: const Icon(Icons.shopping_cart_outlined, color: Colors.black),
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const CartScreen(),
+                  ),
+                );
+              },
+            ),
             Positioned(
               right: 5,
               top: 5,

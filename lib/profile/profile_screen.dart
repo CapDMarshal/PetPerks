@@ -9,6 +9,7 @@ import 'components/wallet.dart';
 import 'components/save-addres.dart';
 import 'components/reviews.dart';
 import 'components/qna.dart';
+import '../search/search_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -85,7 +86,13 @@ class ProfileScreen extends StatelessWidget {
           ),
           IconButton(
             icon: const Icon(Icons.search, color: Colors.black),
-            onPressed: () {},
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const SearchScreen(),
+                ),
+              );
+            },
           ),
         ],
       ),

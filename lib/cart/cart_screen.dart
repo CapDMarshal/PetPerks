@@ -6,31 +6,26 @@ class CartScreen extends StatelessWidget {
   const CartScreen({super.key});
 
   // --- 1. ADDED THE DATA LIST (from myorder_screen.dart) ---
-  final List<Map<String, dynamic>> _items = const [
+  static const List<Map<String, String>> _items = [
     {
       "title": "Dog Body Belt",
-      "icon": Icons.pets,
-      "color": Color(0xFFE0D9CF),
+      "imagePath": "assets/belt_product.jpg",
     },
     {
       "title": "Pet Bed For Dog",
-      "icon": Icons.bed,
-      "color": Color(0xFFE2E6C6),
+      "imagePath": "assets/bed_product.jpg",
     },
     {
       "title": "Dog Cloths",
-      "icon": Icons.shopping_bag,
-      "color": Color(0xFFD4E5E2),
+      "imagePath": "assets/cloths_product.jpg",
     },
     {
       "title": "Dog Chew Toys",
-      "icon": Icons.auto_awesome,
-      "color": Color(0xFFF5E0E4),
+      "imagePath": "assets/chew_toys_product.jpg",
     },
     {
-      "title": "Dog Body Belt",
-      "icon": Icons.circle,
-      "color": Color(0xFFD4EBEB),
+      "title": "Dog Pillow",
+      "imagePath": "assets/pillow.jpg",
     },
   ];
   // --- END OF DATA LIST ---
@@ -103,9 +98,8 @@ class CartScreen extends StatelessWidget {
               itemBuilder: (context, index) {
                 final item = _items[index];
                 return CartItemCard(
-                  title: item['title'],
-                  icon: item['icon'],
-                  imageColor: item['color'],
+                  title: item['title']!,
+                  imagePath: item['imagePath']!,
                 );
               },
             ),
@@ -226,14 +220,12 @@ class CartScreen extends StatelessWidget {
 class CartItemCard extends StatefulWidget {
   // --- ADDED PROPERTIES ---
   final String title;
-  final IconData icon;
-  final Color imageColor;
+  final String imagePath;
 
   const CartItemCard({
     super.key,
     required this.title,
-    required this.icon,
-    required this.imageColor,
+    required this.imagePath,
   });
   // --- END OF ADDED PROPERTIES ---
 
@@ -285,20 +277,24 @@ class _CartItemCardState extends State<CartItemCard> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 100,
-            height: 100,
-            padding: const EdgeInsets.all(8.0),
-            decoration: BoxDecoration(
-              // --- USE WIDGET PROPERTY ---
-              color: widget.imageColor,
-              borderRadius: BorderRadius.circular(12.0),
-            ),
-            // --- USE WIDGET PROPERTY ---
-            child: Icon(
-              widget.icon,
-              size: 60,
-              color: Colors.black54, // Matched myorder screen
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12.0),
+            child: Image.asset(
+              widget.imagePath,
+              width: 100,
+              height: 100,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(12.0),
+                  ),
+                  child: const Icon(Icons.pets, size: 40, color: Colors.grey),
+                );
+              },
             ),
           ),
           const SizedBox(width: 16.0),

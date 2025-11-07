@@ -6,6 +6,7 @@ import '../search/search_screen.dart';
 import '../wishlist/wishlist_screen.dart';
 import '../cart/cart_screen.dart';
 import '../profile/profile_screen.dart';
+import '../category/category_screen.dart';
 
 void main() {
   runApp(const PetPerksApp());
@@ -267,22 +268,6 @@ class _HomePageContentState extends State<HomePageContent> {
                   },
                 ),
                 _buildDrawerItem(
-                  Icons.receipt_long_outlined,
-                  "Orders",
-                  onTap: () {
-                    Navigator.pop(context);
-                    // TODO: Navigate to Orders screen when created
-                  },
-                ),
-                _buildDrawerItem(
-                  Icons.chat_bubble_outline,
-                  "Chat List",
-                  onTap: () {
-                    Navigator.pop(context);
-                    // TODO: Navigate to Chat screen when created
-                  },
-                ),
-                _buildDrawerItem(
                   Icons.shopping_cart_outlined,
                   "My Cart",
                   onTap: () {
@@ -448,17 +433,30 @@ class _HomePageContentState extends State<HomePageContent> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     title,
                     style: const TextStyle(
                         fontSize: 16, fontWeight: FontWeight.bold),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 8),
-                  const Text("Plus free shipping on \$99+ orders!"),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 6),
+                  const Text(
+                    "Plus free shipping on \$99+ orders!",
+                    style: TextStyle(fontSize: 12),
+                  ),
+                  const SizedBox(height: 10),
                   ElevatedButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const ProductListPage()),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    ),
                     child: const Text("Adopt A Pet"),
                   )
                 ],
@@ -506,7 +504,11 @@ class _HomePageContentState extends State<HomePageContent> {
   Widget _buildCategorySection() {
     return Column(
       children: [
-        _buildTitleBar("Find Best Category", "See All"),
+        _buildTitleBar("Find Best Category", "See All", onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const CategoryScreen()),
+          );
+        }),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: GridView.count(
@@ -533,7 +535,11 @@ class _HomePageContentState extends State<HomePageContent> {
 
   Widget _buildCategoryGridItem(String name, String imagePath) {
     return InkWell(
-      onTap: () {},
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const CategoryScreen()),
+        );
+      },
       child: Card(
         elevation: 0,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -572,7 +578,11 @@ class _HomePageContentState extends State<HomePageContent> {
       padding: const EdgeInsets.symmetric(vertical: 16),
       child: Column(
         children: [
-          _buildTitleBar("Our pet care services", "See All"),
+          _buildTitleBar("Our pet care services", "See All", onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const ProductListPage()),
+            );
+          }),
           // Horizontal Tags
           SizedBox(
             height: 40,
@@ -604,25 +614,39 @@ class _HomePageContentState extends State<HomePageContent> {
                 Row(
                   children: [
                     Expanded(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.asset(
-                          "assets/dog_grooming.jpg",
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) =>
-                              Container(height: 100, color: Colors.grey.shade200),
+                      child: InkWell(
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const ProductListPage()),
+                          );
+                        },
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.asset(
+                            "assets/dog_grooming.jpg",
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                Container(height: 100, color: Colors.grey.shade200),
+                          ),
                         ),
                       ),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.asset(
-                          "assets/cat_grooming.jpeg",
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) =>
-                              Container(height: 100, color: Colors.grey.shade200),
+                      child: InkWell(
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const ProductListPage()),
+                          );
+                        },
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.asset(
+                            "assets/cat_grooming.jpeg",
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                Container(height: 100, color: Colors.grey.shade200),
+                          ),
                         ),
                       ),
                     ),
@@ -704,7 +728,11 @@ class _HomePageContentState extends State<HomePageContent> {
       elevation: 1,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
-        onTap: () {},
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const ProductListPage()),
+          );
+        },
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -789,7 +817,11 @@ class _HomePageContentState extends State<HomePageContent> {
   Widget _buildTestimonialSection() {
     return Column(
       children: [
-        _buildTitleBar("What Pet Lovers Say About Us?", "See All"),
+        _buildTitleBar("What Pet Lovers Say About Us?", "See All", onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const ProductListPage()),
+          );
+        }),
         SizedBox(
           height: 240,
           child: ListView(
@@ -906,7 +938,11 @@ class _HomePageContentState extends State<HomePageContent> {
   Widget _buildPeopleAlsoViewedSection() {
     return Column(
       children: [
-        _buildTitleBar("People Also Viewed", "See All"),
+        _buildTitleBar("People Also Viewed", "See All", onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const ProductListPage()),
+          );
+        }),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: GridView.count(
@@ -979,7 +1015,11 @@ class _HomePageContentState extends State<HomePageContent> {
                 ),
               ),
               InkWell(
-                onTap: () {},
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const CartScreen()),
+                  );
+                },
                 child: Text(
                   "View Cart",
                   style: TextStyle(
@@ -1021,7 +1061,11 @@ class _HomePageContentState extends State<HomePageContent> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: () {},
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const CartScreen()),
+                );
+              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.black,
                 foregroundColor: Colors.white,
@@ -1157,7 +1201,11 @@ class _HomePageContentState extends State<HomePageContent> {
                 ],
               ),
               InkWell(
-                onTap: () {},
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const ProductListPage()),
+                  );
+                },
                 child: Text(
                   "See All",
                   style: TextStyle(color: Theme.of(context).primaryColor),
@@ -1280,7 +1328,11 @@ class _HomePageContentState extends State<HomePageContent> {
   Widget _buildBlockbusterDealsSection() {
     return Column(
       children: [
-        _buildTitleBar("Blockbuster Deals", "See All Deals"),
+        _buildTitleBar("Blockbuster Deals", "See All Deals", onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const ProductListPage()),
+          );
+        }),
         // Main Featured Product
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -1424,7 +1476,11 @@ class _HomePageContentState extends State<HomePageContent> {
   Widget _buildWishlistSection() {
     return Column(
       children: [
-        _buildTitleBar("Add To Your Wishlist", "See All"),
+        _buildTitleBar("Add To Your Wishlist", "See All", onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const ProductListPage()),
+          );
+        }),
         SizedBox(
           height: 280,
           child: ListView(
@@ -1584,7 +1640,11 @@ class _HomePageContentState extends State<HomePageContent> {
   Widget _buildFeaturedNowSection() {
     return Column(
       children: [
-        _buildTitleBar("Featured Now", "See All"),
+        _buildTitleBar("Featured Now", "See All", onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const ProductListPage()),
+          );
+        }),
         SizedBox(
           height: 140,
           child: ListView(
@@ -1744,7 +1804,11 @@ class _HomePageContentState extends State<HomePageContent> {
   Widget _buildFeaturedOfferSection() {
     return Column(
       children: [
-        _buildTitleBar("Featured Offer For You", "See All"),
+        _buildTitleBar("Featured Offer For You", "See All", onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const ProductListPage()),
+          );
+        }),
         SizedBox(
           height: 280,
           child: ListView(
@@ -1895,7 +1959,11 @@ class _HomePageContentState extends State<HomePageContent> {
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
             child: ElevatedButton(
-              onPressed: () {},
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const ProductListPage()),
+                );
+              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.black,
                 foregroundColor: Colors.white,
@@ -2093,7 +2161,11 @@ class _HomePageContentState extends State<HomePageContent> {
   Widget _buildSponsoredSection() {
     return Column(
       children: [
-        _buildTitleBar("Sponsored", "See All"),
+        _buildTitleBar("Sponsored", "See All", onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const ProductListPage()),
+          );
+        }),
         SizedBox(
           height: 200,
           child: ListView(

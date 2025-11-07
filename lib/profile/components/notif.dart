@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../search/search_screen.dart';
 
 class NotificationPage extends StatelessWidget {
   const NotificationPage({super.key});
@@ -77,7 +78,13 @@ class NotificationPage extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.search, color: Colors.black),
-            onPressed: () {},
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const SearchScreen(),
+                ),
+              );
+            },
           ),
         ],
       ),

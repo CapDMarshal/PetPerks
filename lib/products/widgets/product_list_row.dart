@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../wishlist/wishlist_screen.dart';
+import '../../cart/cart_screen.dart';
 
 // 1. Diubah menjadi StatefulWidget
 class ProductListRow extends StatefulWidget {
@@ -23,9 +25,17 @@ class _ProductListRowState extends State<ProductListRow> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 140,
-      decoration: BoxDecoration(
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => const ProductDetailScreen(details: dummyDetailData),
+          ),
+        );
+      },
+      child: Container(
+        height: 140,
+        decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
@@ -143,14 +153,23 @@ class _ProductListRowState extends State<ProductListRow> {
                       ),
                       
                       // Tombol Keranjang
-                      Container(
-                        margin: const EdgeInsets.only(right: 15),
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Colors.black,
-                          borderRadius: BorderRadius.circular(10),
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const CartScreen(),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          margin: const EdgeInsets.only(right: 15),
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.black,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.shopping_cart_outlined, color: Colors.white, size: 20),
                         ),
-                        child: const Icon(Icons.shopping_cart_outlined, color: Colors.white, size: 20),
                       ),
                     ],
                   ),
@@ -159,6 +178,7 @@ class _ProductListRowState extends State<ProductListRow> {
             ),
           ),
         ],
+      ),
       ),
     );
   }
