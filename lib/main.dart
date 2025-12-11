@@ -1,7 +1,22 @@
 ﻿import 'package:flutter/material.dart';
-import 'layout/main_layout.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+import 'auth/login_page.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize Firebase with error handling
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    print('Firebase initialized successfully');
+  } catch (e) {
+    print('Firebase initialization error: $e');
+    // Continue without Firebase for now
+  }
+  
   runApp(const PetPerksApp());
 }
 
@@ -16,8 +31,8 @@ class PetPerksApp extends StatelessWidget {
         primarySwatch: Colors.blue,
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      // Use MainLayout which includes bottom navigation
-      home: const MainLayout(),
+      // Temporary: Always show login page until Firebase is configured
+      home: const LoginPage(),
       debugShowCheckedModeBanner: false,
     );
   }

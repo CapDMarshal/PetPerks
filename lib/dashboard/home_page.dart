@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart' hide CarouselController;
 import 'package:carousel_slider/carousel_slider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../products/product_list_page.dart';
 import '../notifications/notification_screen.dart';
 import '../search/search_screen.dart';
@@ -48,13 +49,16 @@ class HomePageContent extends StatefulWidget {
 }
 
 class _HomePageContentState extends State<HomePageContent> {
+
   // Kunci untuk mengontrol Drawer (sidebar)
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   bool _isLoading = true; // Untuk Preloader
+  String _displayName = 'Guest'; // Default display name
 
   @override
   void initState() {
     super.initState();
+    _loadUserData();
     // Mensimulasikan waktu loading (preloader)
     Future.delayed(const Duration(seconds: 2), () {
       if (mounted) {
@@ -63,6 +67,16 @@ class _HomePageContentState extends State<HomePageContent> {
         });
       }
     });
+  }
+
+  // Load user data from Firebase Auth
+  Future<void> _loadUserData() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      setState(() {
+        _displayName = user.displayName ?? user.email?.split('@')[0] ?? 'Guest';
+      });
+    }
   }
 
   @override
@@ -121,9 +135,9 @@ class _HomePageContentState extends State<HomePageContent> {
         ),
       ),
       // Bagian Tengah (Greeting)
-      title: const Text(
-        "Hello’ Roopa",
-        style: TextStyle(
+      title: Text(
+        "Hello, $_displayName",
+        style: const TextStyle(
             color: Colors.black, fontSize: 13, fontWeight: FontWeight.bold),
       ),
       // Bagian Kanan (Ikon)
@@ -209,7 +223,7 @@ class _HomePageContentState extends State<HomePageContent> {
                 const Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("Roopa",
+                    Text("TEst",
                         style: TextStyle(
                             fontSize: 18, fontWeight: FontWeight.bold)),
                     Text("example@gmail.com", style: TextStyle(fontSize: 14)),

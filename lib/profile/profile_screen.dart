@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:petperks/wishlist/wishlist_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'components/notif.dart';
 import 'components/coupons.dart';
 import 'components/track-order.dart';
@@ -10,9 +11,33 @@ import 'components/save-addres.dart';
 import 'components/reviews.dart';
 import 'components/qna.dart';
 import '../search/search_screen.dart';
+import '../services/auth_service.dart';
+import '../auth/login_page.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  String _displayName = 'User';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      setState(() {
+        _displayName = user.displayName ?? user.email?.split('@')[0] ?? 'User';
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -119,19 +144,19 @@ class ProfileScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 16),
-                  const Row(
+                  Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Hello,',
+                      const Text(
+                        'Hello, ',
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w400,
                         ),
                       ),
                       Text(
-                        'Navdeep',
-                        style: TextStyle(
+                        _displayName,
+                        style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
                         ),
@@ -299,12 +324,80 @@ class ProfileScreen extends StatelessWidget {
                   );
                 },
               ),
+              _buildMenuItem(
+                context,
+                'Logout',
+                Icons.logout,
+                onTap: () => _handleLogout(context),
+              ),
               const SizedBox(height: 24),
             ],
           ),
         ),
       ),
     );
+  }
+
+  // Handle Logout
+  Future<void> _handleLogout(BuildContext context) async {
+    final authService = AuthService();
+    
+    // Show confirmation dialog
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Logout'),
+          content: const Text('Are you sure you want to logout?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Logout', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirm == true && context.mounted) {
+      try {
+        // Show loading
+        showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+
+      await authService.logout();
+
+      if (context.mounted) {
+        // Close loading dialog
+        Navigator.of(context).pop();          // Navigate to login page
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (context) => const LoginPage()),
+            (route) => false,
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          // Close loading dialog
+          Navigator.of(context).pop();
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Logout failed: ${e.toString().replaceAll('Exception: ', '')}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
   }
 
   // MODIFIKASI: Menghapus Icon dari _buildActionCard
