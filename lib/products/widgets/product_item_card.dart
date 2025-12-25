@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../wishlist/wishlist_screen.dart';
 import '../../cart/cart_screen.dart';
+import '../../services/api_service.dart';
 
 class ProductItemCard extends StatefulWidget {
+  final String productId;
   final String name;
   final num price;
   final num? oldPrice;
@@ -10,6 +12,7 @@ class ProductItemCard extends StatefulWidget {
 
   const ProductItemCard({
     super.key,
+    required this.productId,
     required this.name,
     required this.price,
     this.oldPrice,
@@ -157,12 +160,24 @@ class _ProductItemCardState extends State<ProductItemCard> {
                       ),
                       // Tombol Keranjang
                       GestureDetector(
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const CartScreen(),
-                            ),
-                          );
+                        onTap: () async {
+                          try {
+                            final ds = DataService();
+                            await ds.addToCart(widget.productId);
+                            if (!mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Added to cart')),
+                            );
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const CartScreen(),
+                              ),
+                            );
+                          } catch (e) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Failed to add to cart: $e')),
+                            );
+                          }
                         },
                         child: Container(
                           padding: const EdgeInsets.all(8),
