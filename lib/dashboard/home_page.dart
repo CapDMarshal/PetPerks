@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart' hide CarouselController;
 import 'package:carousel_slider/carousel_slider.dart';
+<<<<<<< Updated upstream
+import 'product_list_screen.dart';
+=======
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../products/product_list_page.dart';
 import '../notifications/notification_screen.dart';
@@ -10,6 +13,8 @@ import '../profile/profile_screen.dart';
 import '../category/category_screen.dart';
 import '../widgets/wishlist_icon_button.dart';
 import '../services/api_service.dart';
+
+>>>>>>> Stashed changes
 
 void main() {
   runApp(const PetPerksApp());
@@ -53,30 +58,43 @@ class HomePageContent extends StatefulWidget {
 class _HomePageContentState extends State<HomePageContent> {
   // Kunci untuk mengontrol Drawer (sidebar)
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  final DataService _dataService = DataService();
   bool _isLoading = true; // Untuk Preloader
+<<<<<<< Updated upstream
+=======
   String _displayName = 'Guest'; // Default display name
+  List<Map<String, dynamic>> _products = []; // Products from API
+>>>>>>> Stashed changes
 
   @override
   void initState() {
     super.initState();
-    _loadUserData();
+<<<<<<< Updated upstream
     // Mensimulasikan waktu loading (preloader)
     Future.delayed(const Duration(seconds: 2), () {
+=======
+    _loadUserData();
+    _loadProducts();
+  }
+
+  // Load products from Supabase
+  Future<void> _loadProducts() async {
+    try {
+      final products = await _dataService.getProducts();
+      if (mounted) {
+        setState(() {
+          _products = products;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Error loading products: $e');
+>>>>>>> Stashed changes
       if (mounted) {
         setState(() {
           _isLoading = false;
         });
       }
-    });
-  }
-
-  // Load user data from Supabase Auth
-  Future<void> _loadUserData() async {
-    final user = Supabase.instance.client.auth.currentUser;
-    if (user != null) {
-      setState(() {
-        _displayName = user.userMetadata?['display_name'] ?? 'Guest';
-      });
     }
   }
 
@@ -94,7 +112,9 @@ class _HomePageContentState extends State<HomePageContent> {
         if (_isLoading)
           Container(
             color: Colors.white.withOpacity(0.9),
-            child: const Center(child: CircularProgressIndicator()),
+            child: const Center(
+              child: CircularProgressIndicator(),
+            ),
           ),
       ],
     );
@@ -134,13 +154,10 @@ class _HomePageContentState extends State<HomePageContent> {
         ),
       ),
       // Bagian Tengah (Greeting)
-      title: Text(
-        "Hello, $_displayName",
-        style: const TextStyle(
-          color: Colors.black,
-          fontSize: 13,
-          fontWeight: FontWeight.bold,
-        ),
+      title: const Text(
+        "Hello’ Roopa",
+        style: TextStyle(
+            color: Colors.black, fontSize: 13, fontWeight: FontWeight.bold),
       ),
       // Bagian Kanan (Ikon)
       actions: [
@@ -148,15 +165,10 @@ class _HomePageContentState extends State<HomePageContent> {
         Stack(
           children: [
             IconButton(
-              icon: const Icon(
-                Icons.notifications_outlined,
-                color: Colors.black,
-                size: 24,
-              ),
+              icon: const Icon(Icons.notifications_outlined,
+                  color: Colors.black, size: 24),
               onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const NotificationScreen()),
-                );
+                // Navigasi ke halaman notifikasi
               },
             ),
             Positioned(
@@ -168,23 +180,27 @@ class _HomePageContentState extends State<HomePageContent> {
                   color: Colors.red,
                   shape: BoxShape.circle,
                 ),
-                constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                constraints: const BoxConstraints(
+                  minWidth: 16,
+                  minHeight: 16,
+                ),
                 child: const Text(
                   '14',
-                  style: TextStyle(color: Colors.white, fontSize: 10),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                  ),
                   textAlign: TextAlign.center,
                 ),
               ),
-            ),
+            )
           ],
         ),
         // Ikon Search
         IconButton(
           icon: const Icon(Icons.search, color: Colors.black, size: 24),
           onPressed: () {
-            Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (_) => const SearchScreen()));
+            // Navigasi ke halaman search
           },
         ),
         const SizedBox(width: 8),
@@ -218,16 +234,12 @@ class _HomePageContentState extends State<HomePageContent> {
                 const Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      "TEst",
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    Text("Roopa",
+                        style: TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold)),
                     Text("example@gmail.com", style: TextStyle(fontSize: 14)),
                   ],
-                ),
+                )
               ],
             ),
           ),
@@ -236,91 +248,25 @@ class _HomePageContentState extends State<HomePageContent> {
             child: ListView(
               padding: EdgeInsets.zero,
               children: [
-                _buildDrawerItem(
-                  Icons.home,
-                  "Home",
-                  isActive: true,
-                  onTap: () {
-                    Navigator.pop(context);
-                  },
-                ),
-                _buildDrawerItem(
-                  Icons.shopping_bag_outlined,
-                  "Products",
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const ProductListPage(),
-                      ),
-                    );
-                  },
-                ),
-                _buildDrawerItem(
-                  Icons.star_border,
-                  "Featured",
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const ProductListPage(),
-                      ),
-                    );
-                  },
-                ),
-                _buildDrawerItem(
-                  Icons.favorite_border,
-                  "Wishlist",
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const WishlistScreen()),
-                    );
-                  },
-                ),
-                _buildDrawerItem(
-                  Icons.shopping_cart_outlined,
-                  "My Cart",
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const CartScreen()),
-                    );
-                  },
-                ),
-                _buildDrawerItem(
-                  Icons.person_outline,
-                  "Profile",
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const ProfileScreen()),
-                    );
-                  },
-                ),
+                _buildDrawerItem(Icons.home, "Home", isActive: true),
+                _buildDrawerItem(Icons.shopping_bag_outlined, "Products"),
+                _buildDrawerItem(Icons.apps_outlined, "Components"),
+                _buildDrawerItem(Icons.diamond_outlined, "Pages"),
+                _buildDrawerItem(Icons.star_border, "Featured"),
+                _buildDrawerItem(Icons.favorite_border, "Wishlist"),
+                _buildDrawerItem(Icons.receipt_long_outlined, "Orders"),
+                _buildDrawerItem(Icons.chat_bubble_outline, "Chat List"),
+                _buildDrawerItem(Icons.shopping_cart_outlined, "My Cart"),
+                _buildDrawerItem(Icons.person_outline, "Profile"),
                 const Divider(),
-                _buildDrawerItem(
-                  Icons.logout,
-                  "Logout",
-                  onTap: () {
-                    Navigator.pop(context);
-                    // TODO: Add logout logic
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Logout functionality coming soon'),
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
-                  },
-                ),
+                _buildDrawerItem(Icons.logout, "Logout"),
                 const Divider(),
                 // Sidebar Bottom
                 ListTile(
                   leading: const Icon(Icons.brightness_6_outlined),
                   title: const Text("Dark Mode"),
                   trailing: Switch(
-                    value:
-                        false, // Ganti dengan state management (Provider, dll)
+                    value: false, // Ganti dengan state management (Provider, dll)
                     onChanged: (bool value) {
                       // Logika ganti tema
                     },
@@ -345,32 +291,29 @@ class _HomePageContentState extends State<HomePageContent> {
                 ),
               ],
             ),
-          ),
+          )
         ],
       ),
     );
   }
 
   // Helper widget untuk item drawer
-  Widget _buildDrawerItem(
-    IconData icon,
-    String title, {
-    bool isActive = false,
-    VoidCallback? onTap,
-  }) {
+  Widget _buildDrawerItem(IconData icon, String title, {bool isActive = false}) {
     return ListTile(
-      leading: Icon(
-        icon,
-        color: isActive ? Theme.of(context).primaryColor : Colors.grey.shade700,
-      ),
-      title: Text(
-        title,
-        style: TextStyle(
-          color: isActive ? Theme.of(context).primaryColor : Colors.black,
-          fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-        ),
-      ),
-      onTap: onTap ?? () => Navigator.pop(context),
+      leading: Icon(icon,
+          color: isActive
+              ? Theme.of(context).primaryColor
+              : Colors.grey.shade700),
+      title: Text(title,
+          style: TextStyle(
+              color: isActive
+                  ? Theme.of(context).primaryColor
+                  : Colors.black,
+              fontWeight: isActive ? FontWeight.bold : FontWeight.normal)),
+      onTap: () {
+        Navigator.pop(context); // Tutup drawer
+        // Tambahkan logika navigasi
+      },
     );
   }
 
@@ -385,10 +328,7 @@ class _HomePageContentState extends State<HomePageContent> {
           _buildBanner(),
           _buildCategorySection(),
           _buildPetServicesSection(),
-          _buildProductSection(
-            "Reliable Healthy Food For Your Pet",
-            "Dogs Food",
-          ),
+          _buildProductSection("Reliable Healthy Food For Your Pet", "Dogs Food"),
           _buildTestimonialSection(),
           _buildPeopleAlsoViewedSection(),
           _buildCartSection(),
@@ -408,17 +348,11 @@ class _HomePageContentState extends State<HomePageContent> {
   Widget _buildBanner() {
     final List<Widget> bannerItems = [
       _buildBannerItem(
-        'assets/images/banner/pic1.png',
-        'We Give Preference To Your Pets',
-      ),
+          'assets/images/banner/pic1.png', 'We Give Preference To Your Pets'),
       _buildBannerItem(
-        'assets/images/banner/pic1.png',
-        'Another Great Offer for Pets',
-      ),
+          'assets/images/banner/pic1.png', 'Another Great Offer for Pets'),
       _buildBannerItem(
-        'assets/images/banner/pic1.png',
-        'Shop Now and Save Big!',
-      ),
+          'assets/images/banner/pic1.png', 'Shop Now and Save Big!'),
     ];
 
     return Padding(
@@ -451,39 +385,19 @@ class _HomePageContentState extends State<HomePageContent> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     title,
                     style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                        fontSize: 16, fontWeight: FontWeight.bold),
                   ),
-                  const SizedBox(height: 6),
-                  const Text(
-                    "Plus free shipping on \$99+ orders!",
-                    style: TextStyle(fontSize: 12),
-                  ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 8),
+                  const Text("Plus free shipping on \$99+ orders!"),
+                  const SizedBox(height: 12),
                   ElevatedButton(
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const ProductListPage(),
-                        ),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                    ),
+                    onPressed: () {},
                     child: const Text("Adopt A Pet"),
-                  ),
+                  )
                 ],
               ),
             ),
@@ -504,20 +418,15 @@ class _HomePageContentState extends State<HomePageContent> {
 
   // Helper untuk Title Bar
   // `onTap` allows sections to provide custom action for the actionText (eg. navigate to a new screen)
-  Widget _buildTitleBar(
-    String title,
-    String actionText, {
-    VoidCallback? onTap,
-  }) {
+  Widget _buildTitleBar(String title, String actionText, {VoidCallback? onTap}) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            title,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
+          Text(title,
+              style:
+                  const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           InkWell(
             onTap: onTap ?? () {},
             child: Text(
@@ -534,15 +443,7 @@ class _HomePageContentState extends State<HomePageContent> {
   Widget _buildCategorySection() {
     return Column(
       children: [
-        _buildTitleBar(
-          "Find Best Category",
-          "See All",
-          onTap: () {
-            Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (_) => const CategoryScreen()));
-          },
-        ),
+        _buildTitleBar("Find Best Category", "See All"),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: GridView.count(
@@ -552,10 +453,14 @@ class _HomePageContentState extends State<HomePageContent> {
             crossAxisSpacing: 10,
             mainAxisSpacing: 10,
             children: [
-              _buildCategoryGridItem("Dogs", "assets/dog.jpg"),
-              _buildCategoryGridItem("Cats", "assets/cat.jpg"),
-              _buildCategoryGridItem("Rabbits", "assets/rabbit.jpg"),
-              _buildCategoryGridItem("Parrot", "assets/parrot.jpg"),
+              _buildCategoryGridItem(
+                  "Dogs", "assets/images/category/category1/1.png"),
+              _buildCategoryGridItem(
+                  "Cats", "assets/images/category/category1/2.png"),
+              _buildCategoryGridItem(
+                  "Rabbits", "assets/images/category/category1/3.png"),
+              _buildCategoryGridItem(
+                  "Parrot", "assets/images/category/category1/4.png"),
             ],
           ),
         ),
@@ -565,11 +470,7 @@ class _HomePageContentState extends State<HomePageContent> {
 
   Widget _buildCategoryGridItem(String name, String imagePath) {
     return InkWell(
-      onTap: () {
-        Navigator.of(
-          context,
-        ).push(MaterialPageRoute(builder: (_) => const CategoryScreen()));
-      },
+      onTap: () {},
       child: Card(
         elevation: 0,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -590,7 +491,9 @@ class _HomePageContentState extends State<HomePageContent> {
                   color: Colors.white, // Asumsi teks di atas gambar
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
-                  shadows: [Shadow(blurRadius: 2.0, color: Colors.black54)],
+                  shadows: [
+                    Shadow(blurRadius: 2.0, color: Colors.black54)
+                  ],
                 ),
               ),
             ),
@@ -606,15 +509,7 @@ class _HomePageContentState extends State<HomePageContent> {
       padding: const EdgeInsets.symmetric(vertical: 16),
       child: Column(
         children: [
-          _buildTitleBar(
-            "Our pet care services",
-            "See All",
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const ProductListPage()),
-              );
-            },
-          ),
+          _buildTitleBar("Our pet care services", "See All"),
           // Horizontal Tags
           SizedBox(
             height: 40,
@@ -646,57 +541,33 @@ class _HomePageContentState extends State<HomePageContent> {
                 Row(
                   children: [
                     Expanded(
-                      child: InkWell(
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const ProductListPage(),
-                            ),
-                          );
-                        },
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: Image.asset(
-                            "assets/dog_grooming.jpg",
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) =>
-                                Container(
-                                  height: 100,
-                                  color: Colors.grey.shade200,
-                                ),
-                          ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.asset(
+                          "assets/images/category/category1/5.png",
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              Container(height: 100, color: Colors.grey.shade200),
                         ),
                       ),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
-                      child: InkWell(
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const ProductListPage(),
-                            ),
-                          );
-                        },
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: Image.asset(
-                            "assets/cat_grooming.jpeg",
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) =>
-                                Container(
-                                  height: 100,
-                                  color: Colors.grey.shade200,
-                                ),
-                          ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.asset(
+                          "assets/images/category/category1/6.png",
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              Container(height: 100, color: Colors.grey.shade200),
                         ),
                       ),
                     ),
                   ],
-                ),
+                )
               ],
             ),
-          ),
+          )
         ],
       ),
     );
@@ -708,10 +579,11 @@ class _HomePageContentState extends State<HomePageContent> {
       padding: const EdgeInsets.only(right: 8.0),
       child: ActionChip(
         label: Text(label),
-        backgroundColor: isActive
-            ? Theme.of(context).primaryColor
-            : Colors.grey.shade200,
-        labelStyle: TextStyle(color: isActive ? Colors.white : Colors.black),
+        backgroundColor:
+            isActive ? Theme.of(context).primaryColor : Colors.grey.shade200,
+        labelStyle: TextStyle(
+          color: isActive ? Colors.white : Colors.black,
+        ),
         onPressed: () {},
       ),
     );
@@ -721,15 +593,11 @@ class _HomePageContentState extends State<HomePageContent> {
   Widget _buildProductSection(String title, String activeTag) {
     return Column(
       children: [
-        _buildTitleBar(
-          title,
-          "See All",
-          onTap: () {
-            Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (_) => const ProductListPage()));
-          },
-        ),
+        _buildTitleBar(title, "See All", onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const ProductListScreen()),
+          );
+        }),
         SizedBox(
           height: 40,
           child: ListView(
@@ -744,6 +612,7 @@ class _HomePageContentState extends State<HomePageContent> {
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
+<<<<<<< Updated upstream
           child: GridView.count(
             crossAxisCount: 2,
             shrinkWrap: true,
@@ -752,75 +621,85 @@ class _HomePageContentState extends State<HomePageContent> {
             mainAxisSpacing: 10,
             childAspectRatio: 0.75, // Sesuaikan rasio agar pas
             children: [
-              _buildProductCard(
-                "Dog Body Belt",
-                "\$80",
-                "\$95",
-                "assets/belt_product.jpg",
-              ),
-              _buildProductCard(
-                "Dog Cloths",
-                "\$80",
-                "\$95",
-                "assets/cloths_product.jpg",
-              ),
-              _buildProductCard(
-                "Pet Bed For Dog",
-                "\$80",
-                "\$95",
-                "assets/bed_product.jpg",
-              ),
-              _buildProductCard(
-                "Dog Chew Toys",
-                "\$80",
-                "\$95",
-                "assets/chew_toys_product.jpg",
-              ),
+              _buildProductCard("Dog Body Belt", "\$80", "\$95",
+                  "assets/images/product/product1/pic1.png"),
+              _buildProductCard("Dog Cloths", "\$80", "\$95",
+                  "assets/images/product/product1/pic2.png"),
+              _buildProductCard("Pet Bed For Dog", "\$80", "\$95",
+                  "assets/images/product/product1/pic3.png"),
+              _buildProductCard("Dog Chew Toys", "\$80", "\$95",
+                  "assets/images/product/product1/pic4.png"),
             ],
           ),
+=======
+          child: _products.isEmpty
+              ? const SizedBox(
+                  height: 200,
+                  child: Center(
+                    child: Text('No products available'),
+                  ),
+                )
+              : GridView.builder(
+                  itemCount: _products.length > 4 ? 4 : _products.length,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    childAspectRatio: 0.75,
+                    crossAxisSpacing: 10,
+                    mainAxisSpacing: 10,
+                  ),
+                  itemBuilder: (context, index) {
+                    final product = _products[index];
+                    return _buildProductCard(
+                      product['id'] ?? '',
+                      product['name'] ?? 'Unknown Product',
+                      '\$${product['price'] ?? 0}',
+                      '\$${product['old_price'] ?? 0}',
+                      product['image_url'] ?? 'assets/belt_product.jpg',
+                    );
+                  },
+                ),
+>>>>>>> Stashed changes
         ),
       ],
     );
   }
 
   Widget _buildProductCard(
+<<<<<<< Updated upstream
+      String title, String price, String oldPrice, String imagePath) {
+=======
+    String productId,
     String title,
     String price,
     String oldPrice,
     String imagePath,
   ) {
+>>>>>>> Stashed changes
     return Card(
       elevation: 1,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
-        onTap: () {
-          Navigator.of(
-            context,
-          ).push(MaterialPageRoute(builder: (_) => const ProductListPage()));
-        },
+        onTap: () {},
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Stack(
               children: [
                 ClipRRect(
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(12),
-                  ),
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(12)),
                   child: Image.asset(
                     imagePath,
                     height: 150, // Tentukan tinggi gambar
                     width: double.infinity,
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) => Container(
-                      height: 150,
-                      color: Colors.grey.shade200,
-                      child: const Icon(
-                        Icons.pets,
-                        size: 50,
-                        color: Colors.grey,
-                      ),
-                    ),
+                        height: 150,
+                        color: Colors.grey.shade200,
+                        child: const Icon(Icons.pets,
+                            size: 50, color: Colors.grey)),
                   ),
                 ),
                 Positioned(
@@ -831,13 +710,16 @@ class _HomePageContentState extends State<HomePageContent> {
                       color: Colors.white,
                       shape: BoxShape.circle,
                     ),
+<<<<<<< Updated upstream
                     child: const Padding(
                       padding: EdgeInsets.all(4.0),
-                      child: Icon(
-                        Icons.favorite_border,
-                        size: 20,
-                        color: Colors.grey,
-                      ),
+                      child: Icon(Icons.favorite_border,
+                          size: 20, color: Colors.grey),
+=======
+                    child: WishlistIconButton(
+                      productId: productId,
+                      size: 20,
+>>>>>>> Stashed changes
                     ),
                   ),
                 ),
@@ -851,9 +733,7 @@ class _HomePageContentState extends State<HomePageContent> {
                   Text(
                     title,
                     style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
+                        fontWeight: FontWeight.bold, fontSize: 14),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -892,15 +772,7 @@ class _HomePageContentState extends State<HomePageContent> {
   Widget _buildTestimonialSection() {
     return Column(
       children: [
-        _buildTitleBar(
-          "What Pet Lovers Say About Us?",
-          "See All",
-          onTap: () {
-            Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (_) => const ProductListPage()));
-          },
-        ),
+        _buildTitleBar("What Pet Lovers Say About Us?", "See All"),
         SizedBox(
           height: 240,
           child: ListView(
@@ -966,15 +838,16 @@ class _HomePageContentState extends State<HomePageContent> {
                   width: 50,
                   height: 50,
                   fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.person, size: 30),
-                  ),
+                  errorBuilder: (context, error, stackTrace) =>
+                      Container(
+                        width: 50,
+                        height: 50,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade300,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.person, size: 30),
+                      ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -987,7 +860,11 @@ class _HomePageContentState extends State<HomePageContent> {
                   ),
                 ),
               ),
-              Icon(Icons.pets, color: Theme.of(context).primaryColor, size: 24),
+              Icon(
+                Icons.pets,
+                color: Theme.of(context).primaryColor,
+                size: 24,
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -1012,17 +889,10 @@ class _HomePageContentState extends State<HomePageContent> {
   Widget _buildPeopleAlsoViewedSection() {
     return Column(
       children: [
-        _buildTitleBar(
-          "People Also Viewed",
-          "See All",
-          onTap: () {
-            Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (_) => const ProductListPage()));
-          },
-        ),
+        _buildTitleBar("People Also Viewed", "See All"),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
+<<<<<<< Updated upstream
           child: GridView.count(
             crossAxisCount: 2,
             shrinkWrap: true,
@@ -1035,28 +905,58 @@ class _HomePageContentState extends State<HomePageContent> {
                 "Dog Body Belt",
                 "\$80",
                 "\$95",
-                "assets/belt_product.jpg",
+                "assets/images/product/product1/pic1.png",
               ),
               _buildProductCard(
                 "Dog Cloths",
                 "\$80",
                 "\$95",
-                "assets/cloths_product.jpg",
+                "assets/images/product/product1/pic2.png",
               ),
               _buildProductCard(
                 "Pet Bed For Dog",
                 "\$80",
                 "\$95",
-                "assets/bed_product.jpg",
+                "assets/images/product/product1/pic3.png",
               ),
               _buildProductCard(
                 "Dog Chew Toys",
                 "\$80",
                 "\$95",
-                "assets/chew_toys_product.jpg",
+                "assets/images/product/product1/pic4.png",
               ),
             ],
           ),
+=======
+          child: _products.isEmpty
+              ? const SizedBox(
+                  height: 200,
+                  child: Center(
+                    child: Text('No products available'),
+                  ),
+                )
+              : GridView.builder(
+                  itemCount: _products.length > 4 ? 4 : _products.length,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    childAspectRatio: 0.75,
+                    crossAxisSpacing: 10,
+                    mainAxisSpacing: 10,
+                  ),
+                  itemBuilder: (context, index) {
+                    final product = _products[index];
+                    return _buildProductCard(
+                      product['id'] ?? '',
+                      product['name'] ?? 'Unknown Product',
+                      '\$${product['price'] ?? 0}',
+                      '\$${product['old_price'] ?? 0}',
+                      product['image_url'] ?? 'assets/belt_product.jpg',
+                    );
+                  },
+                ),
+>>>>>>> Stashed changes
         ),
         const SizedBox(height: 20),
       ],
@@ -1087,14 +987,13 @@ class _HomePageContentState extends State<HomePageContent> {
             children: [
               const Text(
                 "Items In Your Cart",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               InkWell(
-                onTap: () {
-                  Navigator.of(
-                    context,
-                  ).push(MaterialPageRoute(builder: (_) => const CartScreen()));
-                },
+                onTap: () {},
                 child: Text(
                   "View Cart",
                   style: TextStyle(
@@ -1110,7 +1009,7 @@ class _HomePageContentState extends State<HomePageContent> {
             "Dog Cloths",
             "\$80",
             "\$95",
-            "assets/cloths_product.jpg",
+            "assets/images/product/product1/pic2.png",
             quantity: 1,
             reviews: "2k Review",
           ),
@@ -1119,7 +1018,7 @@ class _HomePageContentState extends State<HomePageContent> {
             "Pet Bed For Dog",
             "\$80",
             "\$95",
-            "assets/bed_product.jpg",
+            "assets/images/product/product1/pic3.png",
             quantity: 1,
             reviews: "2k Review",
           ),
@@ -1128,7 +1027,7 @@ class _HomePageContentState extends State<HomePageContent> {
             "Dog Chew Toys",
             "\$80",
             "\$95",
-            "assets/chew_toys_product.jpg",
+            "assets/images/product/product1/pic4.png",
             quantity: 1,
             reviews: "2k Review",
           ),
@@ -1136,11 +1035,7 @@ class _HomePageContentState extends State<HomePageContent> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: () {
-                Navigator.of(
-                  context,
-                ).push(MaterialPageRoute(builder: (_) => const CartScreen()));
-              },
+              onPressed: () {},
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.black,
                 foregroundColor: Colors.white,
@@ -1151,7 +1046,10 @@ class _HomePageContentState extends State<HomePageContent> {
               ),
               child: const Text(
                 "Proceed To Checkout (3)",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ),
@@ -1222,14 +1120,20 @@ class _HomePageContentState extends State<HomePageContent> {
                   const SizedBox(width: 2),
                   Text(
                     reviews,
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey,
+                    ),
                   ),
                 ],
               ),
               const SizedBox(height: 4),
               Text(
                 "Quantity: $quantity",
-                style: const TextStyle(fontSize: 13, color: Colors.black87),
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: Colors.black87,
+                ),
               ),
             ],
           ),
@@ -1267,11 +1171,7 @@ class _HomePageContentState extends State<HomePageContent> {
                 ],
               ),
               InkWell(
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const ProductListPage()),
-                  );
-                },
+                onTap: () {},
                 child: Text(
                   "See All",
                   style: TextStyle(color: Theme.of(context).primaryColor),
@@ -1293,25 +1193,25 @@ class _HomePageContentState extends State<HomePageContent> {
               _buildPopularNearbyCard(
                 "Beagle",
                 "Special Offer",
-                "assets/beagle.jpg",
+                "assets/images/pets/beagle.png",
                 Colors.orange.shade100,
               ),
               _buildPopularNearbyCard(
                 "Labrador",
                 "Min. 70% Off",
-                "assets/labrador.jpeg",
+                "assets/images/pets/labrador.png",
                 Colors.teal.shade100,
               ),
               _buildPopularNearbyCard(
                 "Golden Retriever",
                 "Best Price",
-                "assets/golden_retriever.jpg",
+                "assets/images/pets/golden.png",
                 Colors.red.shade100,
               ),
               _buildPopularNearbyCard(
                 "Poodle",
                 "Limited Offer",
-                "assets/poodle.jpg",
+                "assets/images/pets/poodle.png",
                 Colors.pink.shade100,
               ),
             ],
@@ -1335,6 +1235,7 @@ class _HomePageContentState extends State<HomePageContent> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Expanded(
+            flex: 3,
             child: Container(
               decoration: BoxDecoration(
                 color: backgroundColor,
@@ -1347,39 +1248,45 @@ class _HomePageContentState extends State<HomePageContent> {
                   imagePath,
                   height: 120,
                   fit: BoxFit.contain,
-                  errorBuilder: (context, error, stackTrace) =>
-                      Icon(Icons.pets, size: 80, color: Colors.grey.shade400),
+                  errorBuilder: (context, error, stackTrace) => Icon(
+                    Icons.pets,
+                    size: 80,
+                    color: Colors.grey.shade400,
+                  ),
                 ),
               ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
+          Expanded(
+            flex: 1,
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Theme.of(context).primaryColor,
-                    fontWeight: FontWeight.w500,
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context).primaryColor,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ],
@@ -1391,15 +1298,7 @@ class _HomePageContentState extends State<HomePageContent> {
   Widget _buildBlockbusterDealsSection() {
     return Column(
       children: [
-        _buildTitleBar(
-          "Blockbuster Deals",
-          "See All Deals",
-          onTap: () {
-            Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (_) => const ProductListPage()));
-          },
-        ),
+        _buildTitleBar("Blockbuster Deals", "See All Deals"),
         // Main Featured Product
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -1429,7 +1328,7 @@ class _HomePageContentState extends State<HomePageContent> {
                   ),
                   child: Center(
                     child: Image.asset(
-                      'assets/belt_product.jpg',
+                      'assets/images/product/product1/pic1.png',
                       height: 180,
                       fit: BoxFit.contain,
                       errorBuilder: (context, error, stackTrace) => Icon(
@@ -1487,14 +1386,26 @@ class _HomePageContentState extends State<HomePageContent> {
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
             children: [
-              _buildSmallProductCard('assets/dog.jpg', Colors.orange.shade50),
-              _buildSmallProductCard('assets/cat.jpg', Colors.pink.shade50),
-              _buildSmallProductCard('assets/rabbit.jpg', Colors.blue.shade50),
               _buildSmallProductCard(
-                'assets/parrot.jpg',
+                'assets/images/category/category1/1.png',
                 Colors.orange.shade50,
               ),
-              _buildSmallProductCard('assets/dog.jpg', Colors.teal.shade50),
+              _buildSmallProductCard(
+                'assets/images/category/category1/2.png',
+                Colors.pink.shade50,
+              ),
+              _buildSmallProductCard(
+                'assets/images/category/category1/3.png',
+                Colors.blue.shade50,
+              ),
+              _buildSmallProductCard(
+                'assets/images/category/category1/4.png',
+                Colors.orange.shade50,
+              ),
+              _buildSmallProductCard(
+                'assets/images/category/category1/1.png',
+                Colors.teal.shade50,
+              ),
             ],
           ),
         ),
@@ -1517,8 +1428,11 @@ class _HomePageContentState extends State<HomePageContent> {
         child: Image.asset(
           imagePath,
           fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) =>
-              Icon(Icons.pets, size: 40, color: Colors.grey.shade400),
+          errorBuilder: (context, error, stackTrace) => Icon(
+            Icons.pets,
+            size: 40,
+            color: Colors.grey.shade400,
+          ),
         ),
       ),
     );
@@ -1528,17 +1442,10 @@ class _HomePageContentState extends State<HomePageContent> {
   Widget _buildWishlistSection() {
     return Column(
       children: [
-        _buildTitleBar(
-          "Add To Your Wishlist",
-          "See All",
-          onTap: () {
-            Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (_) => const ProductListPage()));
-          },
-        ),
+        _buildTitleBar("Add To Your Wishlist", "See All"),
         SizedBox(
           height: 280,
+<<<<<<< Updated upstream
           child: ListView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -1547,25 +1454,52 @@ class _HomePageContentState extends State<HomePageContent> {
                 "Dog Body Belt",
                 "\$80",
                 "\$95",
-                "assets/belt_product.jpg",
+                "assets/images/product/product1/pic1.png",
                 Colors.blue.shade50,
+              ),
+              _buildWishlistCard(
+                "Dog Body Belt",
+                "\$80",
+                "\$95",
+                "assets/images/product/product1/pic2.png",
+                Colors.green.shade50,
               ),
               _buildWishlistCard(
                 "Dog Cloths",
                 "\$80",
                 "\$95",
-                "assets/cloths_product.jpg",
-                Colors.green.shade50,
-              ),
-              _buildWishlistCard(
-                "Pet Bed",
-                "\$80",
-                "\$95",
-                "assets/bed_product.jpg",
+                "assets/images/product/product1/pic3.png",
                 Colors.orange.shade50,
               ),
             ],
           ),
+=======
+          child: _products.isEmpty
+              ? const Center(
+                  child: Text('No products available'),
+                )
+              : ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: _products.length > 3 ? 3 : _products.length,
+                  itemBuilder: (context, index) {
+                    final product = _products[index];
+                    final colors = [
+                      Colors.blue.shade50,
+                      Colors.green.shade50,
+                      Colors.orange.shade50,
+                    ];
+                    return _buildWishlistCard(
+                      product['id'] ?? '',
+                      product['name'] ?? 'Unknown Product',
+                      '\$${product['price'] ?? 0}',
+                      '\$${product['old_price'] ?? 0}',
+                      product['image_url'] ?? 'assets/belt_product.jpg',
+                      colors[index % colors.length],
+                    );
+                  },
+                ),
+>>>>>>> Stashed changes
         ),
         const SizedBox(height: 20),
       ],
@@ -1573,6 +1507,7 @@ class _HomePageContentState extends State<HomePageContent> {
   }
 
   Widget _buildWishlistCard(
+    String productId,
     String title,
     String price,
     String oldPrice,
@@ -1612,8 +1547,11 @@ class _HomePageContentState extends State<HomePageContent> {
                     imagePath,
                     height: 140,
                     fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) =>
-                        Icon(Icons.pets, size: 80, color: Colors.grey.shade400),
+                    errorBuilder: (context, error, stackTrace) => Icon(
+                      Icons.pets,
+                      size: 80,
+                      color: Colors.grey.shade400,
+                    ),
                   ),
                 ),
               ),
@@ -1632,13 +1570,10 @@ class _HomePageContentState extends State<HomePageContent> {
                       ),
                     ],
                   ),
-                  child: IconButton(
-                    icon: const Icon(Icons.favorite_border),
-                    color: Colors.red.shade300,
-                    iconSize: 20,
-                    padding: const EdgeInsets.all(8),
-                    constraints: const BoxConstraints(),
-                    onPressed: () {},
+                  child: WishlistIconButton(
+                    productId: productId,
+                    size: 20,
+                    activeColor: Colors.red.shade300,
                   ),
                 ),
               ),
@@ -1693,15 +1628,7 @@ class _HomePageContentState extends State<HomePageContent> {
   Widget _buildFeaturedNowSection() {
     return Column(
       children: [
-        _buildTitleBar(
-          "Featured Now",
-          "See All",
-          onTap: () {
-            Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (_) => const ProductListPage()));
-          },
-        ),
+        _buildTitleBar("Featured Now", "See All"),
         SizedBox(
           height: 140,
           child: ListView(
@@ -1714,7 +1641,7 @@ class _HomePageContentState extends State<HomePageContent> {
                 "\$95",
                 "40% Off",
                 "2k Review",
-                "assets/russel.png",
+                "assets/images/pets/russell.png",
               ),
               _buildFeaturedNowCard(
                 "Labrador",
@@ -1722,7 +1649,7 @@ class _HomePageContentState extends State<HomePageContent> {
                 "\$95",
                 "40% Off",
                 "2k Review",
-                "assets/labrador.jpeg",
+                "assets/images/pets/labrador.png",
               ),
               _buildFeaturedNowCard(
                 "Golden Retriever",
@@ -1730,7 +1657,7 @@ class _HomePageContentState extends State<HomePageContent> {
                 "\$95",
                 "35% Off",
                 "1.8k Review",
-                "assets/golden_retriever.jpg",
+                "assets/images/pets/golden.png",
               ),
             ],
           ),
@@ -1772,8 +1699,11 @@ class _HomePageContentState extends State<HomePageContent> {
               child: Image.asset(
                 imagePath,
                 fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) =>
-                    Icon(Icons.pets, size: 40, color: Colors.grey.shade400),
+                errorBuilder: (context, error, stackTrace) => Icon(
+                  Icons.pets,
+                  size: 40,
+                  color: Colors.grey.shade400,
+                ),
               ),
             ),
           ),
@@ -1858,15 +1788,7 @@ class _HomePageContentState extends State<HomePageContent> {
   Widget _buildFeaturedOfferSection() {
     return Column(
       children: [
-        _buildTitleBar(
-          "Featured Offer For You",
-          "See All",
-          onTap: () {
-            Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (_) => const ProductListPage()));
-          },
-        ),
+        _buildTitleBar("Featured Offer For You", "See All"),
         SizedBox(
           height: 280,
           child: ListView(
@@ -1878,7 +1800,7 @@ class _HomePageContentState extends State<HomePageContent> {
                 "20%",
                 "Get Flat \$75 Back",
                 "Up to 40% Off",
-                "assets/opening_offer.jpeg",
+                "assets/images/offer/offer1.png",
                 Colors.yellow.shade100,
               ),
               _buildFeaturedOfferCard(
@@ -1886,7 +1808,7 @@ class _HomePageContentState extends State<HomePageContent> {
                 "35%",
                 "Get Flat \$75 Back",
                 "Up to 40% Off",
-                "assets/pet_sitting.jpg",
+                "assets/images/offer/offer2.png",
                 Colors.purple.shade600,
               ),
             ],
@@ -1993,7 +1915,10 @@ class _HomePageContentState extends State<HomePageContent> {
                 const SizedBox(height: 4),
                 Text(
                   subtitle1,
-                  style: const TextStyle(fontSize: 11, color: Colors.black87),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Colors.black87,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -2014,11 +1939,7 @@ class _HomePageContentState extends State<HomePageContent> {
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
             child: ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const ProductListPage()),
-                );
-              },
+              onPressed: () {},
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.black,
                 foregroundColor: Colors.white,
@@ -2030,7 +1951,10 @@ class _HomePageContentState extends State<HomePageContent> {
               ),
               child: const Text(
                 "Collect Now",
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ),
@@ -2080,7 +2004,7 @@ class _HomePageContentState extends State<HomePageContent> {
                 "\$80",
                 "\$95",
                 "Free delivery",
-                "assets/belt_product.jpg",
+                "assets/images/product/product1/pic1.png",
                 Colors.blue.shade50,
               ),
               _buildGreatSavingCard(
@@ -2088,7 +2012,7 @@ class _HomePageContentState extends State<HomePageContent> {
                 "\$80",
                 "\$95",
                 "Free delivery",
-                "assets/cloths_product.jpg",
+                "assets/images/product/product1/pic2.png",
                 Colors.green.shade50,
               ),
               _buildGreatSavingCard(
@@ -2096,7 +2020,7 @@ class _HomePageContentState extends State<HomePageContent> {
                 "\$80",
                 "\$95",
                 "Free delivery",
-                "assets/bed_product.jpg",
+                "assets/images/product/product1/pic3.png",
                 Colors.orange.shade50,
               ),
               _buildGreatSavingCard(
@@ -2104,7 +2028,7 @@ class _HomePageContentState extends State<HomePageContent> {
                 "\$80",
                 "\$95",
                 "Free delivery",
-                "assets/chew_toys_product.jpg",
+                "assets/images/product/product1/pic4.png",
                 Colors.pink.shade50,
               ),
             ],
@@ -2146,8 +2070,11 @@ class _HomePageContentState extends State<HomePageContent> {
                   imagePath,
                   height: 120,
                   fit: BoxFit.contain,
-                  errorBuilder: (context, error, stackTrace) =>
-                      Icon(Icons.pets, size: 60, color: Colors.grey.shade400),
+                  errorBuilder: (context, error, stackTrace) => Icon(
+                    Icons.pets,
+                    size: 60,
+                    color: Colors.grey.shade400,
+                  ),
                 ),
               ),
             ),
@@ -2210,15 +2137,7 @@ class _HomePageContentState extends State<HomePageContent> {
   Widget _buildSponsoredSection() {
     return Column(
       children: [
-        _buildTitleBar(
-          "Sponsored",
-          "See All",
-          onTap: () {
-            Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (_) => const ProductListPage()));
-          },
-        ),
+        _buildTitleBar("Sponsored", "See All"),
         SizedBox(
           height: 200,
           child: ListView(
@@ -2228,19 +2147,19 @@ class _HomePageContentState extends State<HomePageContent> {
               _buildSponsoredCard(
                 "Pet Shop",
                 "Min. 30% Off",
-                "assets/pet_shop.jpeg",
+                "assets/images/sponsored/pet-shop.png",
                 Colors.pink.shade100,
               ),
               _buildSponsoredCard(
                 "Best Dog Food",
                 "Up To 20% Off",
-                "assets/dog_food.jpg",
+                "assets/images/sponsored/dog-food.png",
                 Colors.orange.shade100,
               ),
               _buildSponsoredCard(
-                "Rabbit Food",
+                "Pet Food",
                 "Min. 30% Off",
-                "assets/rabbit_food.jpg",
+                "assets/images/sponsored/pet-food.png",
                 Colors.orange.shade50,
               ),
             ],
