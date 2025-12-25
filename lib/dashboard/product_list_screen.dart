@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
-<<<<<<< Updated upstream
-=======
 import '../search/search_screen.dart';
 import '../services/api_service.dart';
 import '../widgets/wishlist_icon_button.dart';
->>>>>>> Stashed changes
 
 class ProductListScreen extends StatefulWidget {
   const ProductListScreen({super.key});
