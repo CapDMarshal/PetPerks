@@ -1,7 +1,23 @@
 ﻿import 'package:flutter/material.dart';
-import 'layout/main_layout.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'supabase_config.dart';
+import 'auth/login_page.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Supabase
+  try {
+    await Supabase.initialize(
+      url: SupabaseConfig.supabaseUrl,
+      anonKey: SupabaseConfig.supabaseAnonKey,
+    );
+    print('✅ Supabase initialized successfully');
+  } catch (e) {
+    print('❌ Supabase initialization error: $e');
+    // Continue for now, but auth will fail until keys are provided
+  }
+
   runApp(const PetPerksApp());
 }
 
@@ -16,8 +32,8 @@ class PetPerksApp extends StatelessWidget {
         primarySwatch: Colors.blue,
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      // Use MainLayout which includes bottom navigation
-      home: const MainLayout(),
+      // Temporary: Always show login page until Firebase is configured
+      home: const LoginPage(),
       debugShowCheckedModeBanner: false,
     );
   }

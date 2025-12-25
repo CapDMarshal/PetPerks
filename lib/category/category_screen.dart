@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'widgets/category_card.dart'; 
 import 'widgets/product_card.dart';
 import 'search_screen.dart';
-import 'product_list_page.dart'; // Asumsikan ini adalah halaman tujuan navigasi
+import '../products/product_list_page.dart'; // Product list moved to products folder
 
 class CategoryScreen extends StatelessWidget {
   const CategoryScreen({super.key});

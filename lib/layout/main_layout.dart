@@ -89,9 +89,9 @@ class _MainLayoutState extends State<MainLayout> {
           label: 'Cart',
         ),
         const BottomNavigationBarItem(
-          icon: Icon(Icons.document_scanner_outlined),
-          activeIcon: Icon(Icons.document_scanner),
-          label: 'Docs',
+          icon: Icon(Icons.category_outlined),
+          activeIcon: Icon(Icons.category),
+          label: 'Category',
         ),
         const BottomNavigationBarItem(
           icon: Icon(Icons.person_outline),

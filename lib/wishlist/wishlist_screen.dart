@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:petperks/category/search_screen.dart'; 
 import 'package:petperks/cart/cart_screen.dart';
+import '../services/api_service.dart';
 
 // ====================================================================
 // MODEL DATA 📚
@@ -95,18 +96,69 @@ class WishlistScreen extends StatefulWidget {
 }
 
 class _WishlistScreenState extends State<WishlistScreen> {
-  List<Product> wishlistItems = List.from(dummyWishlist);
+  final DataService _dataService = DataService();
+  List<Map<String, dynamic>> wishlistItems = [];
+  bool _isLoading = true;
   String _selectedCategory = 'All';
   final List<String> _categories = ['All', 'Body Belt', 'Ped Food', 'Dog Cloths', 'Ball'];
 
-  void _changeCategory(String category) { setState(() { _selectedCategory = category; }); }
-  List<Product> _getFilteredProducts() {
-    if (_selectedCategory == 'All') { return wishlistItems; } 
-    return wishlistItems.where((item) => item.category == _selectedCategory).toList();
+  @override
+  void initState() {
+    super.initState();
+    _loadWishlist();
   }
-  void _removeItem(String productId) {
-    setState(() { wishlistItems.removeWhere((item) => item.id == productId); });
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Item dihapus dari Wishlist!')));
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Refresh wishlist every time this screen becomes visible
+    _loadWishlist();
+  }
+
+  Future<void> _loadWishlist() async {
+    print('DEBUG: Loading wishlist...');
+    try {
+      final data = await _dataService.getWishlist();
+      print('DEBUG: Wishlist loaded - ${data.length} items found');
+      if (mounted) {
+        setState(() {
+          wishlistItems = data;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Error loading wishlist: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  void _changeCategory(String category) { setState(() { _selectedCategory = category; }); }
+  
+  List<Map<String, dynamic>> _getFilteredProducts() {
+    if (_selectedCategory == 'All') { return wishlistItems; } 
+    return wishlistItems.where((item) => item['products']['category'] == _selectedCategory).toList();
+  }
+  
+  Future<void> _removeItem(String productId) async {
+    try {
+      await _dataService.removeFromWishlist(productId);
+      if (mounted) {
+        setState(() {
+          wishlistItems.removeWhere((item) => item['product_id'] == productId);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Item dihapus dari Wishlist!')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    }
   }
   
   // Fungsi ini sekarang tidak lagi berisi navigasi, navigasi diurus di ProductCard
@@ -115,7 +167,11 @@ class _WishlistScreenState extends State<WishlistScreen> {
   }
 
   double _calculateTotal() {
-    return wishlistItems.fold(0.0, (sum, item) => sum + item.price);
+    return wishlistItems.fold(0.0, (sum, item) {
+      final product = item['products'];
+      final price = product != null ? (product['price'] as num?)?.toDouble() ?? 0.0 : 0.0;
+      return sum + price;
+    });
   }
 
   void _navigateToSearchScreen(BuildContext context) {
@@ -124,33 +180,91 @@ class _WishlistScreenState extends State<WishlistScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final filteredProducts = _getFilteredProducts();
     final totalItems = wishlistItems.length;
     final totalPrice = _calculateTotal();
 
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(toolbarHeight: 0, backgroundColor: Colors.white, elevation: 0),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildWishlistHeader(context, totalItems, totalPrice),
-          _buildCategoryTabs(),
-          const Divider(height: 1, color: Color(0xFFE0E0E0)),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: GridView.builder(
-                itemCount: filteredProducts.length,
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, childAspectRatio: 0.7, crossAxisSpacing: 10, mainAxisSpacing: 10,),
-                itemBuilder: (context, index) {
-                  final product = filteredProducts[index];
-                  return ProductCard(product: product, onRemove: () => _removeItem(product.id), onAddToCart: () => _addToCart(product.id));
-                },
-              ),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          await _loadWishlist();
+        },
+        child: CustomScrollView(
+          slivers: [
+            SliverToBoxAdapter(
+              child: _buildWishlistHeader(context, totalItems, totalPrice),
             ),
+            SliverToBoxAdapter(
+              child: _buildCategoryTabs(),
+            ),
+            const SliverToBoxAdapter(
+              child: Divider(height: 1, color: Color(0xFFE0E0E0)),
+            ),
+            _buildWishlistGrid(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWishlistGrid() {
+    if (_isLoading) {
+      return const SliverFillRemaining(
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+    
+    final filteredProducts = _getFilteredProducts();
+    
+    if (filteredProducts.isEmpty) {
+      return const SliverFillRemaining(
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.favorite_border, size: 64, color: Colors.grey),
+              SizedBox(height: 16),
+              Text('Your wishlist is empty', style: TextStyle(color: Colors.grey, fontSize: 16)),
+            ],
           ),
-        ],
+        ),
+      );
+    }
+    
+    return SliverPadding(
+      padding: const EdgeInsets.all(16),
+      sliver: SliverGrid(
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          childAspectRatio: 0.7,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+        ),
+        delegate: SliverChildBuilderDelegate(
+          (context, index) {
+            final item = filteredProducts[index];
+            final product = item['products'];
+            if (product == null) return const SizedBox.shrink();
+            
+            // Create Product object from database data
+            final productObj = Product(
+              id: item['product_id'] ?? '',
+              name: product['name'] ?? 'Unknown',
+              price: (product['price'] as num?)?.toDouble() ?? 0.0,
+              oldPrice: (product['old_price'] as num?)?.toDouble() ?? 0.0,
+              imageUrl: product['image_url'] ?? 'assets/belt_product.jpg',
+              category: product['category'] ?? 'Unknown',
+            );
+            
+            return ProductCard(
+              product: productObj,
+              onRemove: () => _removeItem(item['product_id']),
+              onAddToCart: () => _addToCart(item['product_id']),
+            );
+          },
+          childCount: filteredProducts.length,
+        ),
       ),
     );
   }

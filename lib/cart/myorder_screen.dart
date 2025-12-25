@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:petperks/profile/components/track-order.dart';
+import 'package:petperks/profile/components/reviews.dart';
 
 class MyOrderScreen extends StatefulWidget {
   const MyOrderScreen({super.key});
@@ -51,7 +53,8 @@ class _MyOrderScreenState extends State<MyOrderScreen> {
         actions: [
           IconButton(
             onPressed: () {
-              // Handle home button tap
+              // Navigate back to the main layout (home)
+              Navigator.of(context).popUntil((route) => route.isFirst);
             },
             icon: const Icon(Icons.home_outlined),
           ),
@@ -256,7 +259,21 @@ class _OrderItemCard extends StatelessWidget {
                       ),
                     ),
                     ElevatedButton(
-                      onPressed: () {},
+                      onPressed: () {
+                        if (isOngoing) {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => const TrackOrderPage(),
+                            ),
+                          );
+                        } else {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => const WriteReviewPage(),
+                            ),
+                          );
+                        }
+                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.black,
                         foregroundColor: Colors.white,

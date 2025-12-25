@@ -1,38 +1,47 @@
 import 'package:flutter/material.dart';
 import 'changelocation_screen.dart';
 import 'checkout_screen.dart';
+import '../services/api_service.dart'; // Contains DataService
 
-class CartScreen extends StatelessWidget {
+class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
 
+  @override
+  State<CartScreen> createState() => _CartScreenState();
+}
+
+class _CartScreenState extends State<CartScreen> {
   // --- 1. ADDED THE DATA LIST (from myorder_screen.dart) ---
-  final List<Map<String, dynamic>> _items = const [
-    {
-      "title": "Dog Body Belt",
-      "icon": Icons.pets,
-      "color": Color(0xFFE0D9CF),
-    },
-    {
-      "title": "Pet Bed For Dog",
-      "icon": Icons.bed,
-      "color": Color(0xFFE2E6C6),
-    },
-    {
-      "title": "Dog Cloths",
-      "icon": Icons.shopping_bag,
-      "color": Color(0xFFD4E5E2),
-    },
-    {
-      "title": "Dog Chew Toys",
-      "icon": Icons.auto_awesome,
-      "color": Color(0xFFF5E0E4),
-    },
-    {
-      "title": "Dog Body Belt",
-      "icon": Icons.circle,
-      "color": Color(0xFFD4EBEB),
-    },
-  ];
+  // --- 1. CHANGED TO STATE VARIABLE ---
+  List<Map<String, dynamic>> _items = [];
+  bool _isLoading = true;
+  final DataService _dataService = DataService();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCartItems();
+  }
+
+  Future<void> _loadCartItems() async {
+    final cartItems = await _dataService.getCartItems();
+    if (mounted) {
+      setState(() {
+        _items = cartItems.map((item) {
+          final product = item['products'] as Map<String, dynamic>;
+          return {
+            "title": product['name'] as String,
+            "imagePath":
+                (product['image_url'] as String?) ?? "assets/belt_product.jpg",
+            "price": product['price'].toString(),
+            "oldPrice": product['old_price'].toString(),
+            "id": product['id'] as String,
+          };
+        }).toList();
+        _isLoading = false;
+      });
+    }
+  }
   // --- END OF DATA LIST ---
 
   @override
@@ -50,19 +59,13 @@ class CartScreen extends StatelessWidget {
               children: [
                 const Text(
                   'My Cart',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 4),
                 // --- 2. UPDATED ITEM COUNT ---
                 Text(
                   '${_items.length} Items  •  Deliver To: London', // Dynamic count
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Colors.black,
-                  ),
+                  style: const TextStyle(fontSize: 14, color: Colors.black),
                 ),
                 // --- END OF UPDATE ---
               ],
@@ -84,8 +87,10 @@ class CartScreen extends StatelessWidget {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
               ),
             ),
           ],
@@ -103,9 +108,8 @@ class CartScreen extends StatelessWidget {
               itemBuilder: (context, index) {
                 final item = _items[index];
                 return CartItemCard(
-                  title: item['title'],
-                  icon: item['icon'],
-                  imageColor: item['color'],
+                  title: item['title']!,
+                  imagePath: item['imagePath']!,
                 );
               },
             ),
@@ -117,7 +121,10 @@ class CartScreen extends StatelessWidget {
             alignment: Alignment.topCenter,
             child: Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 12.0,
+              ),
               decoration: BoxDecoration(
                 color: Colors.white,
                 boxShadow: [
@@ -226,15 +233,9 @@ class CartScreen extends StatelessWidget {
 class CartItemCard extends StatefulWidget {
   // --- ADDED PROPERTIES ---
   final String title;
-  final IconData icon;
-  final Color imageColor;
+  final String imagePath;
 
-  const CartItemCard({
-    super.key,
-    required this.title,
-    required this.icon,
-    required this.imageColor,
-  });
+  const CartItemCard({super.key, required this.title, required this.imagePath});
   // --- END OF ADDED PROPERTIES ---
 
   @override
@@ -258,8 +259,10 @@ class _CartItemCardState extends State<CartItemCard> {
     }
   }
 
-  Widget _buildCounterButton(
-      {required IconData icon, required VoidCallback onPressed}) {
+  Widget _buildCounterButton({
+    required IconData icon,
+    required VoidCallback onPressed,
+  }) {
     return InkWell(
       onTap: onPressed,
       borderRadius: BorderRadius.circular(15),
@@ -269,11 +272,7 @@ class _CartItemCardState extends State<CartItemCard> {
           color: Colors.black,
           shape: BoxShape.circle,
         ),
-        child: Icon(
-          icon,
-          color: Colors.white,
-          size: 16.0,
-        ),
+        child: Icon(icon, color: Colors.white, size: 16.0),
       ),
     );
   }
@@ -285,20 +284,24 @@ class _CartItemCardState extends State<CartItemCard> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 100,
-            height: 100,
-            padding: const EdgeInsets.all(8.0),
-            decoration: BoxDecoration(
-              // --- USE WIDGET PROPERTY ---
-              color: widget.imageColor,
-              borderRadius: BorderRadius.circular(12.0),
-            ),
-            // --- USE WIDGET PROPERTY ---
-            child: Icon(
-              widget.icon,
-              size: 60,
-              color: Colors.black54, // Matched myorder screen
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12.0),
+            child: Image.asset(
+              widget.imagePath,
+              width: 100,
+              height: 100,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(12.0),
+                  ),
+                  child: const Icon(Icons.pets, size: 40, color: Colors.grey),
+                );
+              },
             ),
           ),
           const SizedBox(width: 16.0),
@@ -334,18 +337,11 @@ class _CartItemCardState extends State<CartItemCard> {
                       ),
                     ),
                     SizedBox(width: 8.0),
-                    Icon(
-                      Icons.star,
-                      color: Colors.orange,
-                      size: 16,
-                    ),
+                    Icon(Icons.star, color: Colors.orange, size: 16),
                     SizedBox(width: 4.0),
                     Text(
                       '(2k Review)',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey,
-                      ),
+                      style: TextStyle(fontSize: 14, color: Colors.grey),
                     ),
                   ],
                 ),
