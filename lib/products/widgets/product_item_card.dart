@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import '../../widgets/wishlist_icon_button.dart';
 import '../../wishlist/wishlist_screen.dart';
 import '../../cart/cart_screen.dart';
 
-class ProductItemCard extends StatefulWidget {
+class ProductItemCard extends StatelessWidget {
+  final String? productId; // Added productId
   final String name;
   final num price;
   final num? oldPrice;
@@ -10,25 +12,12 @@ class ProductItemCard extends StatefulWidget {
 
   const ProductItemCard({
     super.key,
+    this.productId, // Added productId parameter
     required this.name,
     required this.price,
     this.oldPrice,
     required this.imagePath,
   });
-
-  @override
-  State<ProductItemCard> createState() => _ProductItemCardState();
-}
-
-class _ProductItemCardState extends State<ProductItemCard> {
-  // STATE BARU: Melacak status favorit
-  bool _isFavorite = false;
-
-  void _toggleFavorite() {
-    setState(() {
-      _isFavorite = !_isFavorite;
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -56,7 +45,7 @@ class _ProductItemCardState extends State<ProductItemCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Bagian Gambar
+            // Product Image with Wishlist Button
             Expanded(
               child: Stack(
                 children: [
@@ -64,9 +53,9 @@ class _ProductItemCardState extends State<ProductItemCard> {
                     borderRadius: const BorderRadius.vertical(
                       top: Radius.circular(15),
                     ),
-                    child: widget.imagePath.startsWith('http')
+                    child: imagePath.startsWith('http')
                         ? Image.network(
-                            widget.imagePath,
+                            imagePath,
                             fit: BoxFit.cover,
                             width: double.infinity,
                             errorBuilder: (_, __, ___) => Container(
@@ -75,7 +64,7 @@ class _ProductItemCardState extends State<ProductItemCard> {
                             ),
                           )
                         : Image.asset(
-                            widget.imagePath,
+                            imagePath,
                             fit: BoxFit.cover,
                             width: double.infinity,
                             errorBuilder: (_, __, ___) => Container(
@@ -85,43 +74,41 @@ class _ProductItemCardState extends State<ProductItemCard> {
                           ),
                   ),
 
-                  // ===== PERUBAHAN DI SINI =====
-                  Positioned(
-                    top: 10,
-                    right: 10,
-                    child: GestureDetector(
-                      onTap: _toggleFavorite,
-                      child: Icon(
-                        // <-- Container putih dihilangkan
-                        _isFavorite
-                            ? Icons.favorite
-                            : Icons.favorite_border, // <-- Perubahan ikon
-                        color: Colors.red,
-                        size: 22, // Ukuran disesuaikan
-                        // Tambahkan shadow agar terlihat jelas di atas gambar
-                        shadows: [
-                          Shadow(
-                            blurRadius: 2.0,
-                            color: Colors.black.withOpacity(0.5),
-                            offset: const Offset(1.0, 1.0),
-                          ),
-                        ],
+                  // Wishlist Icon Button
+                  if (productId != null && productId!.isNotEmpty)
+                    Positioned(
+                      top: 10,
+                      right: 10,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: WishlistIconButton(
+                          productId: productId!,
+                          size: 20,
+                        ),
                       ),
                     ),
-                  ),
-                  // ===== AKHIR PERUBAHAN =====
                 ],
               ),
             ),
 
-            // Bagian Detail Produk
+            // Product Details
             Padding(
               padding: const EdgeInsets.all(10.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    widget.name,
+                    name,
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
@@ -138,15 +125,15 @@ class _ProductItemCardState extends State<ProductItemCard> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '\$${widget.price}',
+                            '\$$price',
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 18,
                             ),
                           ),
-                          if (widget.oldPrice != null)
+                          if (oldPrice != null)
                             Text(
-                              '\$${widget.oldPrice}',
+                              '\$$oldPrice',
                               style: const TextStyle(
                                 decoration: TextDecoration.lineThrough,
                                 color: Colors.grey,
@@ -155,7 +142,7 @@ class _ProductItemCardState extends State<ProductItemCard> {
                             ),
                         ],
                       ),
-                      // Tombol Keranjang
+                      // Cart Button
                       GestureDetector(
                         onTap: () {
                           Navigator.of(context).push(

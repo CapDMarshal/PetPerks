@@ -8,6 +8,8 @@ import '../wishlist/wishlist_screen.dart';
 import '../cart/cart_screen.dart';
 import '../profile/profile_screen.dart';
 import '../category/category_screen.dart';
+import '../widgets/wishlist_icon_button.dart';
+import '../services/api_service.dart';
 
 void main() {
   runApp(const PetPerksApp());
