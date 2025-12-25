@@ -4,10 +4,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'components/notif.dart';
 import 'components/coupons.dart';
 import 'components/track-order.dart';
-import 'components/your-order.dart';
+import '../cart/myorder_screen.dart';
 import 'components/edit-profile.dart';
-import 'components/wallet.dart';
-import 'components/save-addres.dart';
+import '../cart/paymentmethod_screen.dart';
+import '../cart/listlocation_screen.dart';
 import 'components/reviews.dart';
 import 'components/qna.dart';
 import '../search/search_screen.dart';
@@ -220,7 +220,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const YourOrderPage(),
+                            builder: (context) => const MyOrderScreen(),
                           ),
                         );
                       },
@@ -272,7 +272,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const WalletPage()),
+                    MaterialPageRoute(builder: (context) => const PaymentMethodScreen()),
                   );
                 },
               ),
@@ -284,7 +284,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const SaveAddressPage(),
+                      builder: (context) => const ListLocationScreen(),
                     ),
                   );
                 },
