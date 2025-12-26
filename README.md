@@ -1,402 +1,373 @@
-<!--
-	Struktur laporan ini disusun ulang agar menyerupai format laporan akademik (seperti referensi PDF yang Anda kirim):
-	Cover → Abstrak → Daftar Isi → Bab 1 s.d. 7 → Daftar Pustaka → Lampiran.
--->
+# PetPerks 🐾
 
-# PetPerks — Laporan Pengembangan Aplikasi Flutter
+E-commerce mobile application untuk produk hewan peliharaan, dibuat dengan **Flutter** dan **Supabase**.
 
+## 📱 Features
 
-Nama Aplikasi: PetPerks  
-Tanggal: 7 November 2025  
-Penulis: (isi nama Anda)  
-Mata Kuliah/Proyek: (opsional, isi sesuai kebutuhan)
+- ✅ **Authentication** - Email/password login & registration
+- ✅ **Product Catalog** - Browse products dengan filtering by category
+- ✅ **Shopping Cart** - Manage items untuk checkout
+- ✅ **Wishlist** - Save produk favorit
+- ✅ **Product Management** - CRUD operations (authenticated users)
+- ✅ **Profile Management** - Update user information
+- ✅ **Image Upload** - Upload gambar produk ke Supabase Storage
+- ✅ **Row Level Security** - Secure data with Supabase RLS
 
-—
+## 🛠️ Tech Stack
 
-## Abstrak
+- **Frontend**: Flutter 3.9.2+
+- **Backend**: Supabase (BaaS)
+- **Database**: PostgreSQL via Supabase
+- **Authentication**: Supabase Auth
+- **Storage**: Supabase Storage
+- **State Management**: Provider
 
-Laporan ini mendokumentasikan proses pengembangan aplikasi Flutter “PetPerks” mulai dari inisialisasi proyek, perancangan arsitektur, implementasi fitur utama (Home, Wishlist, Cart, Category, Profile), hingga pengujian dan hasil. Pendekatan arsitektur menggunakan komponen `MainLayout` dengan `IndexedStack` untuk mempertahankan state lintas tab, serta navigasi berbasis `Navigator`. Hasil akhir adalah aplikasi prototipe fungsional yang siap dijalankan di beberapa platform (Android, iOS, Web, Desktop) dengan struktur kode modular dan mudah dikembangkan.
+## 📋 Prerequisites
 
-—
+- Flutter SDK (^3.9.2)
+- Dart SDK
+- Android Studio / VS Code
+- Supabase Account (free tier)
 
-## Daftar Isi
+## 🚀 Quick Start
 
-1. [Pendahuluan](#bab-1-pendahuluan)  
-2. [Analisis dan Kebutuhan Sistem](#bab-2-analisis-dan-kebutuhan-sistem)  
-3. [Perancangan Sistem](#bab-3-perancangan-sistem)  
-4. [Implementasi](#bab-4-implementasi)  
-5. [Pengujian dan Hasil](#bab-5-pengujian-dan-hasil)  
-6. [Pembahasan](#bab-6-pembahasan)  
-7. [Screenshot Aplikasi](#bab-7-screenshot-aplikasi)  
-8. [Kesimpulan dan Saran](#bab-8-kesimpulan-dan-saran)  
-9. [Daftar Pustaka](#daftar-pustaka)  
-10. [Lampiran](#lampiran)
+### 1. Clone Repository
 
-—
-
-## Bab 1. Pendahuluan
-
-### 1.1 Latar Belakang
-Pengembangan aplikasi e-commerce/produk hewan peliharaan membutuhkan antarmuka yang intuitif, alur navigasi yang efisien, serta struktur kode yang terorganisir. Flutter dipilih karena produktivitas tinggi dan dukungan multi-platform.
-
-### 1.2 Tujuan
-- Menyusun aplikasi prototipe “PetPerks”.
-- Menerapkan navigasi tab yang mempertahankan state.
-- Menyediakan komponen UI reusable dan mudah dikembangkan.
-
-### 1.3 Ruang Lingkup
-- Fokus pada UI/UX, navigasi, dan alur dasar e-commerce (browse → wishlist/cart → checkout).  
-- Integrasi backend dan pembayaran nyata berada di luar cakupan.
-
-—
-
-## Bab 2. Analisis dan Kebutuhan Sistem
-
-### 2.1 Prasyarat Perangkat Lunak
-- Flutter SDK terpasang (`flutter doctor` hijau)  
-- VS Code/Android Studio, Android SDK/iOS toolchain  
-- Perangkat fisik/emulator/simulator
-
-### 2.2 Dependensi Utama (pubspec.yaml)
-- `carousel_slider: ^5.0.0` (banner)  
-- `flutter_feather_icons: ^2.0.0` (opsional ikon)  
-- (Opsional) `provider: ^6.0.0` untuk state global
-
-### 2.3 Kebutuhan Non-Fungsional
-- Performa UI halus di device menengah  
-- Struktur kode modular, mudah diuji dan dikembangkan  
-- Fallback aman untuk aset yang tidak tersedia (`errorBuilder`)
-
-—
-
-## Bab 3. Perancangan Sistem
-
-### 3.1 Arsitektur Aplikasi (ringkas)
-`MainLayout` (Stateful) + `BottomNavigationBar` + `IndexedStack` guna menjaga state setiap tab (Home, Wishlist, Cart, Category, Profile). Masing-masing screen mengelola state lokalnya.
-
-
-### 3.2 Struktur Folder (lib/)
-```
-lib/
-├── main.dart
-├── layout/ (MainLayout, state opsional)
-├── dashboard/ (Home, listing)
-├── wishlist/
-├── cart/
-├── category/
-├── products/
-└── profile/
-```
-
-
-### 3.3 Alur Navigasi Inti
-```
-BottomNav.onTap(index)
- → setState(() => _selectedIndex = index)
-	 → IndexedStack menampilkan screen pada index
-		 → State screen lain tetap tersimpan
-```
-
-—
-
-## Bab 4. Implementasi
-
-### 4.1 Inisialisasi Proyek
-```powershell
-flutter create PetPerks
+```bash
+git clone <repository-url>
 cd PetPerks
+```
+
+### 2. Install Dependencies
+
+```bash
 flutter pub get
 ```
 
-### 4.2 Entry Point & Tema (`lib/main.dart`)
-```dart
-void main() => runApp(const PetPerksApp());
+### 3. Setup Supabase
 
-class PetPerksApp extends StatelessWidget {
-	const PetPerksApp({super.key});
-	@override
-	Widget build(BuildContext context) {
-		return MaterialApp(
-			title: 'PetPerks',
-			theme: ThemeData(primarySwatch: Colors.blue),
-			home: const MainLayout(),
-			debugShowCheckedModeBanner: false,
-		);
-	}
+#### A. Create Supabase Project
+
+1. Go to [supabase.com](https://supabase.com)
+2. Create a new project
+3. Wait for setup to complete (~2 minutes)
+
+#### B. Get Credentials
+
+1. In Supabase Dashboard, go to **Settings** → **API**
+2. Copy:
+   - **Project URL**: `https://[your-project].supabase.co`
+   - **anon public** key: `eyJhbG...`
+
+#### C. Configure Flutter App
+
+Create/edit `lib/supabase_config.dart`:
+
+```dart
+class SupabaseConfig {
+  static const String supabaseUrl = 'YOUR_SUPABASE_URL';
+  static const String supabaseAnonKey = 'YOUR_SUPABASE_ANON_KEY';
 }
 ```
 
+⚠️ **Important**: Add this file to `.gitignore` if sharing code publicly!
 
-### 4.3 Layout & Navigasi (`lib/layout/main_layout.dart`)
-```dart
-class _MainLayoutState extends State<MainLayout> {
-	int _selectedIndex = 0;
-	final _screens = [
-		const HomePageContent(),
-		const WishlistScreen(),
-		const CartScreen(),
-		const CategoryScreen(),
-		const ProfileScreen(),
-	];
-	Widget build(BuildContext c) => Scaffold(
-		body: IndexedStack(index: _selectedIndex, children: _screens),
-		bottomNavigationBar: BottomNavigationBar(
-			currentIndex: _selectedIndex,
-			onTap: (i) => setState(() => _selectedIndex = i),
-			type: BottomNavigationBarType.fixed,
-			items: const [
-				BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Home'),
-				BottomNavigationBarItem(icon: Icon(Icons.favorite_border), label: 'Wishlist'),
-				BottomNavigationBarItem(icon: Icon(Icons.shopping_cart_outlined), label: 'Cart'),
-				BottomNavigationBarItem(icon: Icon(Icons.document_scanner_outlined), label: 'Docs'),
-				BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
-			],
-		),
-	);
-}
-```
+#### D. Setup Database
 
+1. In Supabase Dashboard, open **SQL Editor**
+2. Run the following SQL scripts in order:
 
-### 4.4 Home & Banner (`lib/dashboard/home_page.dart`)
-```dart
-Widget _buildBanner() => CarouselSlider(
-	options: CarouselOptions(autoPlay: true, aspectRatio: 2.0, viewportFraction: 1.0),
-	items: [ _buildBannerItem('assets/images/banner/pic1.png', 'We Give Preference To Your Pets') ],
+**Create Tables:**
+
+```sql
+-- 1. Profiles
+CREATE TABLE profiles (
+  id UUID REFERENCES auth.users ON DELETE CASCADE PRIMARY KEY,
+  email TEXT UNIQUE,
+  display_name TEXT,
+  phone_number TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-// Contoh navigasi
-Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ProductListPage()));
+-- 2. Products
+CREATE TABLE products (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name TEXT NOT NULL,
+  price NUMERIC(10, 2) NOT NULL,
+  old_price NUMERIC(10, 2),
+  image_url TEXT,
+  category TEXT,
+  description TEXT,
+  reviews_count INTEGER DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 3. Cart Items
+CREATE TABLE cart_items (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users ON DELETE CASCADE NOT NULL,
+  product_id UUID REFERENCES products ON DELETE CASCADE NOT NULL,
+  quantity INTEGER DEFAULT 1,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(user_id, product_id)
+);
+
+-- 4. Wishlist Items
+CREATE TABLE wishlist_items (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users ON DELETE CASCADE NOT NULL,
+  product_id UUID REFERENCES products ON DELETE CASCADE NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(user_id, product_id)
+);
+
+-- 5. Orders
+CREATE TABLE orders (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users ON DELETE CASCADE NOT NULL,
+  total NUMERIC(10, 2) NOT NULL,
+  status TEXT DEFAULT 'pending',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 6. Order Items
+CREATE TABLE order_items (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  order_id UUID REFERENCES orders ON DELETE CASCADE NOT NULL,
+  product_id UUID REFERENCES products ON DELETE CASCADE NOT NULL,
+  quantity INTEGER NOT NULL,
+  price NUMERIC(10, 2) NOT NULL
+);
+
+-- 7. Auto-create profile trigger
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.profiles (id, email, display_name)
+  VALUES (NEW.id, NEW.email, NEW.raw_user_meta_data->>'display_name');
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 ```
 
+**Setup Row Level Security (RLS):**
 
-### 4.5 Wishlist (`lib/wishlist/wishlist_screen.dart`)
-```dart
-class ProductCard extends StatelessWidget {
-	final Product product; // name, imageUrl, price, oldPrice
-	@override
-	Widget build(BuildContext context) {
-		return Card(
-			child: Column(children: [
-				Expanded(child: Image.asset(product.imageUrl, fit: BoxFit.contain)),
-				Text(product.name),
-				Row(children: [Text('\$${product.price}'), Text('\$${product.oldPrice}', style: const TextStyle(decoration: TextDecoration.lineThrough))]),
-				IconButton(icon: const Icon(Icons.shopping_cart_outlined), onPressed: () => _navigateToCartScreen(context)),
-			]),
-		);
-	}
-}
+```sql
+-- Enable RLS
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE products ENABLE ROW LEVEL SECURITY;
+ALTER TABLE cart_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE wishlist_items ENABLE ROW LEVEL SECURITY;
+
+-- Profiles policies
+CREATE POLICY "Users can view own profile" ON profiles FOR SELECT USING (auth.uid() = id);
+CREATE POLICY "Users can update own profile" ON profiles FOR UPDATE USING (auth.uid() = id);
+
+-- Products policies
+CREATE POLICY "Anyone can view products" ON products FOR SELECT USING (true);
+CREATE POLICY "Authenticated can insert" ON products FOR INSERT TO authenticated WITH CHECK (true);
+CREATE POLICY "Authenticated can update" ON products FOR UPDATE TO authenticated USING (true);
+CREATE POLICY "Authenticated can delete" ON products FOR DELETE TO authenticated USING (true);
+
+-- Cart policies
+CREATE POLICY "Users can manage own cart" ON cart_items FOR ALL USING (auth.uid() = user_id);
+
+-- Wishlist policies
+CREATE POLICY "Users can manage own wishlist" ON wishlist_items FOR ALL USING (auth.uid() = user_id);
 ```
 
+**Sample Data (Optional):**
 
-### 4.6 Cart & Checkout (`lib/cart/cart_screen.dart`)
-```dart
-class _CartItemCardState extends State<CartItemCard> {
-	int _quantity = 1;
-	void _incrementQuantity() => setState(() => _quantity++);
-	void _decrementQuantity() { if (_quantity > 1) setState(() => _quantity--); }
-}
+```sql
+INSERT INTO products (name, price, old_price, image_url, category, description) VALUES
+('Dog Body Belt', 80, 95, 'assets/belt_product.jpg', 'Accessories', 'Durable and comfortable body belt for dogs.'),
+('Dog Cloths', 80, 95, 'assets/cloths_product.jpg', 'Clothing', 'Stylish and warm clothes for your pet.'),
+('Pet Bed For Dog', 80, 95, 'assets/bed_product.jpg', 'Bedding', 'Soft and cozy bed.'),
+('Dog Chew Toys', 80, 95, 'assets/chew_toys_product.jpg', 'Toys', 'Safe and durable toys.');
 ```
 
+#### E. Setup Storage Bucket
 
-### 4.7 State Global (Opsional) (`lib/layout/navigation_state.dart`)
-```dart
-class NavigationState extends ChangeNotifier {
-	int _cartItemCount = 14; List<String> _wishlist = [];
-	int get cartItemCount => _cartItemCount; int get wishlistItemCount => _wishlist.length;
-	void updateCartCount(int c) { _cartItemCount = c; notifyListeners(); }
-	void addToWishlist(String id) { if (!_wishlist.contains(id)) { _wishlist.add(id); notifyListeners(); } }
-}
+1. In Supabase Dashboard, go to **Storage**
+2. Create new bucket: `product-images`
+3. Set as **Public bucket**
+4. Add storage policies:
+
+```sql
+-- Public read
+CREATE POLICY "Public can view" ON storage.objects
+  FOR SELECT USING (bucket_id = 'product-images');
+
+-- Authenticated upload
+CREATE POLICY "Authenticated can upload" ON storage.objects
+  FOR INSERT TO authenticated WITH CHECK (bucket_id = 'product-images');
 ```
-Aktivasi (opsional): bungkus `MainLayout` dengan `ChangeNotifierProvider` (paket `provider`).
 
-—
+#### F. Setup Authentication
 
-## Bab 5. Pengujian dan Hasil
+1. Go to **Authentication** → **Providers**
+2. Enable **Email** provider
+3. (Optional) Disable email confirmation untuk development
 
-### 5.1 Menjalankan Aplikasi
-```powershell
-flutter pub get
-flutter devices
+### 4. Run Application
+
+#### Debug Mode
+
+```bash
 flutter run
 ```
-Variasi platform:
-```powershell
-flutter run -d windows
-flutter run -d chrome
-flutter run -d emulator
+
+#### Release APK
+
+```bash
+flutter build apk --release
 ```
 
+APK location: `build/app/outputs/flutter-apk/app-release.apk`
 
-### 5.2 Hasil Uji (contoh)
-Metodologi singkat:
-- Perangkat uji: Windows 11, Flutter SDK sesuai `pubspec` (Dart ^3.9.2), emulator Android & target Windows desktop.
-- Data dummy, tanpa backend. Fokus pada alur UI dan navigasi.
-
-Skenario uji utama dan hasil ringkas:
-- Navigasi bawah (Home ⇄ Wishlist ⇄ Cart ⇄ Category ⇄ Profile)
-	- Expected: Perpindahan tab lancar, posisi scroll tiap tab tetap (IndexedStack).
-	- Result: PASS — State tab terjaga, tidak terjadi rebuild berlebih.
-- Home (Banner & Grid)
-	- Expected: Banner autoplay, item grid tampil, tombol CTA menuju list produk/detail.
-	- Result: PASS — Banner berjalan dan fallback `errorBuilder` bekerja jika aset tidak ada.
-- Wishlist (Grid + Hapus item + Arahkan ke Cart/Detail)
-	- Expected: Dapat menghapus item, dapat menuju detail/cart.
-	- Result: PASS — Interaksi berjalan, snackbar konfirmasi tampil.
-- Cart (Kuantitas + Subtotal + Checkout)
-	- Expected: Tombol +/- mengubah kuantitas, subtotal tampil, lanjut ke checkout.
-	- Result: PASS — Kuantitas berubah, tombol lanjut aktif.
-- Drawer & AppBar actions
-	- Expected: Drawer terbuka, tombol notifikasi/search navigasi sesuai.
-	- Result: PASS — Navigasi sesuai, fallback ikon aman saat aset tidak tersedia.
-
-Catatan performa:
-- Waktu render awal stabil pada perangkat uji; tidak ditemukan jank pada perpindahan tab.
-- Penggunaan `IndexedStack` menjaga UX namun menahan widget di memori (trade-off yang diterima pada skala prototipe).
-
-—
-
-## Bab 6. Pembahasan
-
-### 6.1 Keputusan Desain
-- `IndexedStack` dipilih untuk menjaga state tiap tab (trade-off: memory lebih besar vs UX lebih baik).
-- Navigasi imperatif sederhana (`Navigator`) agar fokus prototipe cepat.
-
-### 6.2 Analisis Arsitektur & Trade-off
-- IndexedStack vs Navigator push/pop per tab: IndexedStack menjaga state scroll & form, menghemat waktu interaksi; konsekuensinya konsumsi memori tiap tab aktif.
-- Komposisi screen modular memudahkan maintenance, namun memerlukan disiplin pemisahan widget dan pengelolaan state agar tidak terjadi prop-drilling berlebih.
-
-### 6.3 Kinerja
-- Tidak terlihat jank pada animasi ringan dan perpindahan tab di perangkat uji.
-- Asset yang tidak tersedia ditangani `errorBuilder` sehingga menghindari crash dan menjaga stabilitas rendering.
-
-### 6.4 Risiko dan Mitigasi
-- Path aset yang tidak konsisten → mitigasi dengan fallback `errorBuilder` dan daftar aset yang jelas di `pubspec.yaml`.
-- Skala data meningkat → pertimbangkan pagination/lazy loading dan memoization pada builder.
-- Manajemen state lintas fitur → aktifkan `provider`/state management terpusat bila kebutuhan data lintas halaman meningkat.
-
-### 6.5 Peluang Pengembangan Lanjutan
-- Integrasi backend (produk, auth, orders), caching lokal, dan sinkronisasi keranjang/wishlist.
-- Theming dinamis (dark mode global) dan global state untuk badge cart/wishlist.
-- Test otomatis (widget/integration) untuk alur kritikal checkout dan navigasi.
-
-### 6.6 Perbandingan Alternatif Navigasi
-- Navigator 2.0/Router/GoRouter: Memudahkan deep-linking, URL sync (web), dan guard rute. Lebih kompleks dibanding Navigator 1.0, cocok saat kebutuhan routing makin kaya.
-- BottomNavigationBar + Navigator stack per tab: Tiap tab punya stack sendiri; kembali (back) hanya di dalam tab aktif. Cocok untuk aplikasi dengan alur dalam per tab.
-- TabBar/TabBarView: Cocok untuk jumlah tab sedikit dan swipe gesture, namun kurang fleksibel untuk alur kompleks dibanding bottom nav + IndexedStack.
-
-### 6.7 Keamanan & Privasi (Rencana)
-- Sanitasi input dan validasi form sebelum transaksi/checkout.
-- Penyimpanan token/credential aman (Secure Storage) jika autentikasi ditambahkan.
-- Minimalkan data pribadi di log; terapkan kebijakan privasi bila integrasi backend aktif.
-
-### 6.8 Aksesibilitas & Internasionalisasi
-- Kontras warna dan ukuran font mengikuti guideline Material untuk keterbacaan.
-- Label semantik (Semantics) pada ikon penting seperti cart/wishlist untuk screen reader.
-- Rencana i18n: menggunakan `flutter_localizations` dan ARB untuk multi-bahasa.
-
-### 6.9 Skalabilitas & Modularisasi
-- Pemecahan fitur per domain (`dashboard/`, `wishlist/`, `cart/`, dst.) memudahkan kepemilikan modul dan pengujian parsial.
-- Abstraksi lapisan data (repository/service) direkomendasikan saat menambah backend agar UI tidak bergantung langsung pada sumber data.
-- Pertimbangkan DI (get_it) untuk menyuntikkan dependency dan memudahkan mocking saat tes.
-
-### 6.10 Observabilitas & Reliabilitas
-- Logging terstruktur (logger) untuk event penting: navigasi, aksi cart, dan error UI.
-- Error boundary sederhana di layer UI: tampilkan snackbar/toast atau halaman error bila terjadi kegagalan data.
-- Monitoring crash (mis. Sentry/Firebase Crashlytics) saat rilis produksi.
-
-—
-
-## Bab 7. Screenshot Aplikasi
-
-Bagian ini menampilkan placeholder screenshot untuk halaman-halaman utama aplikasi. Silakan masukkan file gambar aktual Anda ke dalam folder `docs/screenshots/` (atau lokasi lain yang Anda tentukan) dan ganti placeholder di bawah ini.
-
-### 7.1 Dashboard
-Screenshot tampilan Dashboard:
+## 📂 Project Structure
 
 ```
-(Sisipkan gambar: docs/screenshots/dashboard.png)
+lib/
+├── main.dart                      # Entry point & Supabase init
+├── supabase_config.dart           # Supabase credentials (gitignored)
+├── auth/
+│   ├── login_page.dart
+│   └── register_page.dart
+├── services/
+│   ├── auth_service.dart          # Authentication logic
+│   └── api_service.dart           # Data fetching (DataService)
+├── layout/
+│   └── main_layout.dart           # Bottom navigation
+├── dashboard/
+│   └── home_page.dart
+├── products/
+│   ├── product_list_page.dart
+│   ├── product_detail_page.dart
+│   └── add_edit_product_page.dart
+├── cart/
+│   └── cart_screen.dart
+├── wishlist/
+│   └── wishlist_screen.dart
+└── profile/
+    └── profile_screen.dart
 ```
 
-Deskripsi singkat: Halaman ini menampilkan banner promosi, kategori, produk rekomendasi, testimonial, dan berbagai section konten lain yang menjadi entry point interaksi pengguna.
+## 🔧 Configuration
 
-### 7.2 Category
-Screenshot tampilan Category:
+### Environment Variables
 
+Copy `lib/supabase_config.dart.template` to `lib/supabase_config.dart` and fill in your credentials.
+
+### .gitignore
+
+Make sure to add:
 ```
-(Sisipkan gambar: docs/screenshots/category.png)
+lib/supabase_config.dart
 ```
 
-Deskripsi singkat: Halaman kategori menampilkan daftar kategori atau produk terfilter, mempermudah pengguna menelusuri item berdasarkan klasifikasi tertentu.
+## 🐛 Troubleshooting
 
-### 7.3 Wishlist
-```
-(Sisipkan gambar: docs/screenshots/wishlist.png)
-```
-Menampilkan item yang disimpan pengguna untuk dilihat atau dibeli nanti; mendukung penghapusan item dan akses cepat ke detail produk.
+### Build Failed: google-services.json missing
 
-### 7.4 Cart
+**Error:**
 ```
-(Sisipkan gambar: docs/screenshots/cart.png)
+File google-services.json is missing
 ```
-Menampilkan ringkasan produk yang akan dibeli, kuantitas yang dapat disesuaikan, subtotal, dan tombol lanjut ke checkout.
 
-### 7.5 Product Detail
-```
-(Sisipkan gambar: docs/screenshots/product-detail.png)
-```
-Berisi gambar produk, harga lama & baru, rating, pilihan ukuran/warna, kuantitas, dan tombol tambah ke keranjang.
+**Fix:**
+Remove Firebase plugin from `android/app/build.gradle.kts`:
 
-### 7.6 Profile
+```kotlin
+// Remove these lines:
+// id("com.google.gms.google-services")
 ```
-(Sisipkan gambar: docs/screenshots/profile.png)
+
+### RLS Permission Denied
+
+**Error:**
 ```
-Halaman profil berisi informasi akun, akses ke order, wallet, kupon, pengaturan notifikasi, dan opsi personalisasi lainnya.
+new row violates row-level security policy
+```
+
+**Fix:**
+- Ensure user is logged in
+- Verify RLS policies are created correctly
+- Check policy logic matches your operation
+
+### Supabase Connection Error
+
+**Error:**
+```
+Supabase initialization error
+```
+
+**Fix:**
+- Verify `supabaseUrl` and `supabaseAnonKey` are correct
+- Check no extra spaces or newlines
+- Ensure project is not paused in Supabase dashboard
+
+## 📝 Development Notes
+
+### Authentication Flow
+
+1. User registers → Supabase Auth creates user → Database trigger creates profile
+2. User logs in → JWT token stored automatically
+3. All requests include JWT → RLS filters data by user
+
+### Data Fetching
+
+Use `DataService` from `lib/services/api_service.dart`:
+
+```dart
+final dataService = DataService();
+
+// Get products
+final products = await dataService.getProducts();
+
+// Get user's cart
+final cartItems = await dataService.getCartItems();
+
+// Add to cart
+await dataService.addToCart(productId, quantity: 2);
+```
+
+### RLS Security
+
+- Cart & wishlist automatically filtered by logged-in user
+- Products readable by all, writable by authenticated users
+- No manual user_id filtering needed in code
+
+## 📖 Documentation
+
+For detailed documentation, see:
+- **Laporan Lengkap**: `PetPerks_Laporan.docx`
+- **SQL Scripts**: `rls_fix.sql`, `seed_data.sql`
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to branch (`git push origin feature/AmazingFeature`)
+5. Open Pull Request
+
+## 📄 License
+
+This project is for educational purposes.
+
+## 🙋 Support
+
+For issues or questions:
+- Check troubleshooting section above
+- Review Supabase documentation: https://supabase.com/docs
+- Check Flutter docs: https://docs.flutter.dev
 
 ---
 
-## Bab 8. Kesimpulan dan Saran
-
-Prototipe PetPerks berhasil diwujudkan dengan arsitektur modular dan navigasi yang menjaga state. Ke depan, disarankan integrasi API backend, autentikasi pengguna, manajemen state global yang konsisten, dan cakupan pengujian otomatis lebih luas.
-
-—
-
-## Daftar Pustaka
-
-- Flutter Documentation: https://docs.flutter.dev/
-- carousel_slider: https://pub.dev/packages/carousel_slider
-- provider (opsional): https://pub.dev/packages/provider
-
-—
-
-## Lampiran
-
-### A. Konfigurasi `pubspec.yaml` (ringkasan)
-```yaml
-environment:
-	sdk: ^3.9.2
-dependencies:
-	flutter:
-		sdk: flutter
-	carousel_slider: ^5.0.0
-	flutter_feather_icons: ^2.0.0
-flutter:
-	uses-material-design: true
-	assets:
-		- assets/
-```
-
-### B. Troubleshooting Umum
-Jika `flutter run` gagal (Exit Code: 1):
-```powershell
-flutter pub get
-flutter clean
-flutter pub get
-flutter doctor -v
-flutter run
-```
-Periksa juga path asset di kode; widget telah dilengkapi `errorBuilder` sebagai fallback.
-
-
-—
-
-Dokumen ini disusun ulang agar mengikuti struktur laporan formal. Jika Anda ingin saya memasukkan logo kampus/instansi dan data penulis ke halaman sampul, kirimkan detailnya—saya akan lengkapi.
+**Happy coding! 🚀**
