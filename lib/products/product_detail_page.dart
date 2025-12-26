@@ -90,14 +90,33 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
           if (_isLoggedIn) ...[
             IconButton(
               icon: const Icon(Icons.edit),
-              onPressed: () {
-                Navigator.push(
+              onPressed: () async {
+                // Map data product untuk edit page (sesuaikan field name)
+                final productForEdit = {
+                  'id': widget.product['id'],
+                  'name': widget.product['name'],
+                  'price': widget.product['price'],
+                  'oldPrice': widget.product['oldPrice'],
+                  'category': widget.product['category'],
+                  'imagePath': widget.product['imagePath'],
+                  'description': widget.product['description'],
+                };
+                
+                final result = await Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (context) =>
-                        AddEditProductPage(product: widget.product),
+                        AddEditProductPage(product: productForEdit),
                   ),
                 );
+
+                // Jika berhasil edit, kembali dan refresh
+                if (result == true && mounted) {
+                  Navigator.pop(context, true); // Return true untuk trigger refresh
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Product updated successfully')),
+                  );
+                }
               },
             ),
             IconButton(
@@ -107,8 +126,8 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                   context: context,
                   builder: (context) => AlertDialog(
                     title: const Text('Delete Product'),
-                    content: const Text(
-                      'Are you sure you want to delete this product?',
+                    content: Text(
+                      'Are you sure you want to delete "${widget.product['name']}"?',
                     ),
                     actions: [
                       TextButton(
@@ -126,15 +145,40 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                   ),
                 );
 
-                if (confirm == true) {
+                if (confirm == true && mounted) {
                   try {
+                    // Show loading
+                    showDialog(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (context) => const Center(
+                        child: CircularProgressIndicator(),
+                      ),
+                    );
+
                     await DataService()
                         .deleteProduct(widget.product['id'].toString());
-                    Navigator.pop(context);
+                    
+                    if (mounted) {
+                      Navigator.pop(context); // Close loading
+                      Navigator.pop(context, true); // Return true untuk trigger refresh
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Product deleted successfully'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    }
                   } catch (e) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Error deleting product: $e')),
-                    );
+                    if (mounted) {
+                      Navigator.pop(context); // Close loading
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Error deleting product: $e'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
                   }
                 }
               },

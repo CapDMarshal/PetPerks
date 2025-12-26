@@ -140,13 +140,16 @@ class _ProductListPageState extends State<ProductListPage> {
               padding: const EdgeInsets.only(bottom: 10.0),
               child: GestureDetector(
                 onTap: () async {
-                  await Navigator.push(
+                  final result = await Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (_) => ProductDetailPage(product: product),
                     ),
                   );
-                  _loadProducts(); // Refresh in case of edit/delete
+                  // Refresh jika ada perubahan (edit/delete)
+                  if (result == true) {
+                    _loadProducts();
+                  }
                 },
                 child: ProductListRow(product: product),
               ),
@@ -171,13 +174,16 @@ class _ProductListPageState extends State<ProductListPage> {
         final product = products[index];
         return GestureDetector(
           onTap: () async {
-            await Navigator.push(
+            final result = await Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (_) => ProductDetailPage(product: product),
               ),
             );
-            _loadProducts(); // Refresh in case of edit/delete
+            // Refresh jika ada perubahan (edit/delete)
+            if (result == true) {
+              _loadProducts();
+            }
           },
           child: ProductItemCard(
             product: product,

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../cart/cart_screen.dart';
-import '../product_detail_page.dart';
 
 // 1. Diubah menjadi StatefulWidget
 class ProductListRow extends StatefulWidget {
@@ -24,30 +23,22 @@ class _ProductListRowState extends State<ProductListRow> {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => ProductDetailPage(product: widget.product),
+    return Container(
+      height: 140,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 5,
+            offset: const Offset(0, 3),
           ),
-        );
-      },
-      child: Container(
-        height: 140,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(15),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
-              spreadRadius: 1,
-              blurRadius: 5,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // 1. Gambar Produk
             Padding(
@@ -224,7 +215,6 @@ class _ProductListRowState extends State<ProductListRow> {
             ),
           ],
         ),
-      ),
     );
   }
 }

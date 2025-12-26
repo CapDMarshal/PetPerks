@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../cart/cart_screen.dart';
 import '../../services/api_service.dart';
-import '../product_detail_page.dart';
 
 class ProductItemCard extends StatefulWidget {
   final Map<String, dynamic> product;
@@ -27,22 +26,14 @@ class _ProductItemCardState extends State<ProductItemCard> {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => ProductDetailPage(product: widget.product),
-          ),
-        );
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(15),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
-              spreadRadius: 1,
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
               blurRadius: 5,
               offset: const Offset(0, 3),
             ),
@@ -191,7 +182,6 @@ class _ProductItemCardState extends State<ProductItemCard> {
             ),
           ],
         ),
-      ),
     );
   }
 }
