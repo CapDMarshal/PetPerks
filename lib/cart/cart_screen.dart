@@ -35,7 +35,10 @@ class _CartScreenState extends State<CartScreen> {
                 (product['image_url'] as String?) ?? "assets/belt_product.jpg",
             "price": product['price'].toString(),
             "oldPrice": product['old_price'].toString(),
-            "id": product['id'] as String,
+            // product id from products
+            "productId": product['id'] as String,
+            // quantity comes from cart_items row
+            "quantity": (item['quantity'] as int?) ?? 1,
           };
         }).toList();
         _isLoading = false;
@@ -110,6 +113,10 @@ class _CartScreenState extends State<CartScreen> {
                 return CartItemCard(
                   title: item['title']!,
                   imagePath: item['imagePath']!,
+                  productId: item['productId']!,
+                  initialQuantity: item['quantity'] ?? 1,
+                  dataService: _dataService,
+                  onRemove: () => _loadCartItems(),
                 );
               },
             ),
@@ -234,8 +241,20 @@ class CartItemCard extends StatefulWidget {
   // --- ADDED PROPERTIES ---
   final String title;
   final String imagePath;
+  final String productId;
+  final int initialQuantity;
+  final DataService dataService;
+  final VoidCallback? onRemove;
 
-  const CartItemCard({super.key, required this.title, required this.imagePath});
+  const CartItemCard({
+    super.key,
+    required this.title,
+    required this.imagePath,
+    required this.productId,
+    required this.initialQuantity,
+    required this.dataService,
+    this.onRemove,
+  });
   // --- END OF ADDED PROPERTIES ---
 
   @override
@@ -245,17 +264,51 @@ class CartItemCard extends StatefulWidget {
 class _CartItemCardState extends State<CartItemCard> {
   int _quantity = 1;
 
-  void _incrementQuantity() {
+  @override
+  void initState() {
+    super.initState();
+    _quantity = widget.initialQuantity;
+  }
+
+  Future<void> _incrementQuantity() async {
+    final old = _quantity;
     setState(() {
       _quantity++;
     });
+    try {
+      await widget.dataService.addToCart(widget.productId,
+          quantity: _quantity);
+    } catch (e) {
+      setState(() {
+        _quantity = old;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to update quantity: $e')),
+        );
+      }
+    }
   }
 
-  void _decrementQuantity() {
+  Future<void> _decrementQuantity() async {
     if (_quantity > 1) {
+      final old = _quantity;
       setState(() {
         _quantity--;
       });
+      try {
+        await widget.dataService.addToCart(widget.productId,
+            quantity: _quantity);
+      } catch (e) {
+        setState(() {
+          _quantity = old;
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to update quantity: $e')),
+          );
+        }
+      }
     }
   }
 
@@ -381,8 +434,23 @@ class _CartItemCardState extends State<CartItemCard> {
                       ],
                     ),
                     InkWell(
-                      onTap: () {
-                        print('Removing item...');
+                      onTap: () async {
+                        try {
+                          await widget.dataService
+                              .removeFromCart(widget.productId);
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Item removed')),
+                            );
+                          }
+                          if (widget.onRemove != null) widget.onRemove!();
+                        } catch (e) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Failed to remove: $e')),
+                            );
+                          }
+                        }
                       },
                       borderRadius: BorderRadius.circular(4),
                       child: Padding(
