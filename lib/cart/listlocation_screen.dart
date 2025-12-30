@@ -1,42 +1,58 @@
 import 'package:flutter/material.dart';
 import 'changelocation_screen.dart';
-import 'checkout_screen.dart';
+
+import '../services/api_service.dart';
 
 class ListLocationScreen extends StatefulWidget {
-  const ListLocationScreen({super.key});
+  final int? initialSelectedId;
+
+  const ListLocationScreen({super.key, this.initialSelectedId});
 
   @override
   State<ListLocationScreen> createState() => _ListLocationScreenState();
 }
 
 class _ListLocationScreenState extends State<ListLocationScreen> {
-  int _selectedAddressId = 1;
-  final List<Map<String, dynamic>> _addresses = [
-    {
-      "icon": Icons.home_outlined,
-      "title": "Home Address",
-      "subtitle": "123 Main Street, Anytown, USA 12345",
-      "id": 0
-    },
-    {
-      "icon": Icons.location_pin,
-      "title": "Office Address",
-      "subtitle": "456 Elm Avenue, Smallville, CA 98765",
-      "id": 1
-    },
-    {
-      "icon": Icons.home_outlined,
-      "title": "Home Address",
-      "subtitle": "789 Maple Lane, Suburbia, NY 54321",
-      "id": 2
-    },
-    {
-      "icon": Icons.storefront_outlined,
-      "title": "Shop Address",
-      "subtitle": "654 Pine Road, Countryside, FL 34567",
-      "id": 3
+  int _selectedAddressId = -1; // -1 indicates none selected or default
+  List<Map<String, dynamic>> _addresses = [];
+  bool _isLoading = true;
+  final DataService _dataService = DataService();
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize with passed ID or -1
+    _selectedAddressId = widget.initialSelectedId ?? -1;
+    _loadAddresses();
+  }
+
+  Future<void> _loadAddresses() async {
+    final addresses = await _dataService.getUserAddresses();
+    if (mounted) {
+      setState(() {
+        _addresses = addresses;
+        _isLoading = false;
+        // Optional: Select the first one ONLY if nothing was passed initially
+        // AND nothing is currently selected (which is covered by init logic, but here we check list empty)
+        if (_addresses.isNotEmpty && _selectedAddressId == -1) {
+          _selectedAddressId = _addresses.first['id'] as int;
+        }
+      });
     }
-  ];
+  }
+
+  IconData _getIconForType(String type) {
+    switch (type.toLowerCase()) {
+      case 'home':
+        return Icons.home_outlined;
+      case 'office':
+        return Icons.location_pin; // Or building icon
+      case 'shop':
+        return Icons.storefront_outlined;
+      default:
+        return Icons.place_outlined;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -48,28 +64,40 @@ class _ListLocationScreenState extends State<ListLocationScreen> {
         elevation: 1,
         centerTitle: true, // <-- ADD THIS LINE
       ),
-      body: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-        children: [
-          ..._addresses.map((address) {
-            return _AddressListTile(
-              icon: address['icon'],
-              title: address['title'],
-              subtitle: address['subtitle'],
-              value: address['id'],
-              groupValue: _selectedAddressId,
-              onChanged: (value) {
-                setState(() {
-                  _selectedAddressId = value!;
-                });
-              },
-            );
-          }).toList(),
-          const SizedBox(height: 16.0),
-          _AddAddressButton(),
-          const SizedBox(height: 16.0),
-        ],
-      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : ListView(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 8.0,
+              ),
+              children: [
+                if (_addresses.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: Text('No addresses found. Add one below!'),
+                  ),
+                ..._addresses.map((address) {
+                  final id = address['id'] as int;
+                  final title = address['title'] as String;
+                  return _AddressListTile(
+                    icon: _getIconForType(title),
+                    title: title,
+                    subtitle: address['address_line'] as String,
+                    value: id,
+                    groupValue: _selectedAddressId,
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedAddressId = value!;
+                      });
+                    },
+                  );
+                }).toList(),
+                const SizedBox(height: 16.0),
+                _AddAddressButton(),
+                const SizedBox(height: 16.0),
+              ],
+            ),
       bottomNavigationBar: Container(
         padding: const EdgeInsets.all(16.0),
         decoration: BoxDecoration(
@@ -85,13 +113,19 @@ class _ListLocationScreenState extends State<ListLocationScreen> {
         ),
         child: ElevatedButton(
           onPressed: () {
-            print('Selected Address ID: $_selectedAddressId');
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const CheckoutScreen(),
-              ),
+            if (_selectedAddressId == -1) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Please select an address')),
+              );
+              return;
+            }
+            final selected = _addresses.firstWhere(
+              (a) => a['id'] == _selectedAddressId,
+              orElse: () => {},
             );
+            if (selected.isNotEmpty) {
+              Navigator.pop(context, selected);
+            }
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.black,
@@ -99,8 +133,7 @@ class _ListLocationScreenState extends State<ListLocationScreen> {
             padding: const EdgeInsets.symmetric(vertical: 18.0),
             minimumSize: const Size(double.infinity, 50),
             shape: RoundedRectangleBorder(
-              borderRadius:
-                  BorderRadius.circular(8.0),
+              borderRadius: BorderRadius.circular(8.0),
             ),
             textStyle: const TextStyle(
               fontSize: 18,
@@ -144,11 +177,7 @@ class _AddressListTile extends StatelessWidget {
               color: Colors.black,
               borderRadius: BorderRadius.circular(10.0),
             ),
-            child: Icon(
-              icon,
-              color: Colors.white,
-              size: 28.0,
-            ),
+            child: Icon(icon, color: Colors.white, size: 28.0),
           ),
           const SizedBox(width: 16.0),
           Expanded(
@@ -165,10 +194,7 @@ class _AddressListTile extends StatelessWidget {
                 const SizedBox(height: 4.0),
                 Text(
                   subtitle,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Colors.black54,
-                  ),
+                  style: const TextStyle(fontSize: 14, color: Colors.black54),
                 ),
               ],
             ),
@@ -195,9 +221,7 @@ class _AddAddressButton extends StatelessWidget {
       onPressed: () {
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (context) => const ChangeLocationScreen(),
-          ),
+          MaterialPageRoute(builder: (context) => const ChangeLocationScreen()),
         );
       },
       style: OutlinedButton.styleFrom(
@@ -217,10 +241,7 @@ class _AddAddressButton extends StatelessWidget {
               SizedBox(width: 12.0),
               Text(
                 'Add Address',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               ),
             ],
           ),

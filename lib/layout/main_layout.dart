@@ -18,27 +18,37 @@ class _MainLayoutState extends State<MainLayout> {
   int _selectedIndex = 0;
 
   // List of screens to display
-  final List<Widget> _screens = [
-    const HomePageContent(),
-    const WishlistScreen(),
-    const CartScreen(),
-    const CategoryScreen(),
-    const ProfileScreen(),
-  ];
+  // GlobalKey for CartScreen
+  final GlobalKey<CartScreenState> _cartKey = GlobalKey<CartScreenState>();
+
+  late List<Widget> _screens;
+
+  @override
+  void initState() {
+    super.initState();
+    _screens = [
+      const HomePageContent(),
+      const WishlistScreen(),
+      CartScreen(key: _cartKey),
+      const CategoryScreen(),
+      const ProfileScreen(),
+    ];
+  }
 
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
     });
+    // If Cart tab (index 2) is tapped, refresh it
+    if (index == 2) {
+      _cartKey.currentState?.refresh();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: _screens,
-      ),
+      body: IndexedStack(index: _selectedIndex, children: _screens),
       bottomNavigationBar: _buildBottomNav(),
     );
   }
@@ -75,14 +85,11 @@ class _MainLayoutState extends State<MainLayout> {
                   ),
                   child: const Text(
                     '14',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 8,
-                    ),
+                    style: TextStyle(color: Colors.white, fontSize: 8),
                     textAlign: TextAlign.center,
                   ),
                 ),
-              )
+              ),
             ],
           ),
           activeIcon: const Icon(Icons.shopping_cart),
