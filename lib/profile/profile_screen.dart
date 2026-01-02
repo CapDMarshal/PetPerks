@@ -3,7 +3,7 @@ import 'package:petperks/wishlist/wishlist_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'components/notif.dart';
 import 'components/coupons.dart';
-import 'components/track-order.dart';
+
 import '../cart/myorder_screen.dart';
 import 'components/edit-profile.dart';
 import '../cart/paymentmethod_screen.dart';
@@ -200,7 +200,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const TrackOrderPage(),
+                            builder: (context) => const MyOrderScreen(),
                           ),
                         );
                       },
@@ -272,7 +272,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const PaymentMethodScreen()),
+                    MaterialPageRoute(
+                      builder: (context) => const PaymentMethodScreen(),
+                    ),
                   );
                 },
               ),

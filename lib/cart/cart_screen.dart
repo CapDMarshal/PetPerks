@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'changelocation_screen.dart';
+import 'listlocation_screen.dart';
 import 'checkout_screen.dart';
 import '../services/api_service.dart'; // Contains DataService
 
@@ -7,40 +7,77 @@ class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
 
   @override
-  State<CartScreen> createState() => _CartScreenState();
+  State<CartScreen> createState() => CartScreenState();
 }
 
-class _CartScreenState extends State<CartScreen> {
+class CartScreenState extends State<CartScreen> {
   // --- 1. ADDED THE DATA LIST (from myorder_screen.dart) ---
   // --- 1. CHANGED TO STATE VARIABLE ---
   List<Map<String, dynamic>> _items = [];
   bool _isLoading = true;
   final DataService _dataService = DataService();
+  String? _currentAddress; // Default to null to force selection
+  Map<String, dynamic>? _selectedAddressMap; // Store full object
 
   @override
   void initState() {
     super.initState();
-    _loadCartItems();
+    refresh();
   }
 
-  Future<void> _loadCartItems() async {
+  Future<void> refresh() async {
     final cartItems = await _dataService.getCartItems();
     if (mounted) {
       setState(() {
         _items = cartItems.map((item) {
           final product = item['products'] as Map<String, dynamic>;
+          // Parse price safely
+          double price = 0.0;
+          var p = product['price'];
+          if (p is int) {
+            price = p.toDouble();
+          } else if (p is double) {
+            price = p;
+          } else if (p is String) {
+            price = double.tryParse(p) ?? 0.0;
+          }
+
+          // Parse old price safely
+          double oldPrice = 0.0;
+          var op = product['old_price'];
+          if (op is int) {
+            oldPrice = op.toDouble();
+          } else if (op is double) {
+            oldPrice = op;
+          } else if (op is String) {
+            oldPrice = double.tryParse(op) ?? 0.0;
+          }
+
           return {
             "title": product['name'] as String,
             "imagePath":
                 (product['image_url'] as String?) ?? "assets/belt_product.jpg",
-            "price": product['price'].toString(),
-            "oldPrice": product['old_price'].toString(),
-            "id": product['id'] as String,
+            "price": price, // Store as double
+            "oldPrice": oldPrice, // Store as double
+            // product id from products
+            "productId": product['id'] as String,
+            // quantity comes from cart_items row
+            "quantity": (item['quantity'] as int?) ?? 1,
           };
         }).toList();
         _isLoading = false;
       });
     }
+  }
+
+  double get _subtotal {
+    double total = 0.0;
+    for (var item in _items) {
+      double price = item['price'] as double;
+      int qty = item['quantity'] as int;
+      total += price * qty;
+    }
+    return total;
   }
   // --- END OF DATA LIST ---
 
@@ -63,21 +100,37 @@ class _CartScreenState extends State<CartScreen> {
                 ),
                 const SizedBox(height: 4),
                 // --- 2. UPDATED ITEM COUNT ---
+                // --- 2. UPDATED ITEM COUNT ---
                 Text(
-                  '${_items.length} Items  •  Deliver To: London', // Dynamic count
+                  _currentAddress == null
+                      ? '${_items.length} Items  •  Please choose address'
+                      : '${_items.length} Items  •  Deliver To: $_currentAddress',
                   style: const TextStyle(fontSize: 14, color: Colors.black),
                 ),
                 // --- END OF UPDATE ---
               ],
             ),
             OutlinedButton.icon(
-              onPressed: () {
-                Navigator.push(
+              onPressed: () async {
+                final result = await Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const ChangeLocationScreen(),
+                    builder: (context) => ListLocationScreen(
+                      initialSelectedId: _selectedAddressMap?['id'],
+                    ),
                   ),
                 );
+                if (result != null && result is Map<String, dynamic>) {
+                  setState(() {
+                    _selectedAddressMap = result;
+                    // Use title or address line, truncated if needed
+                    String addr = result['address_line'] ?? result['title'];
+                    if (addr.length > 15) {
+                      addr = '${addr.substring(0, 15)}...';
+                    }
+                    _currentAddress = addr;
+                  });
+                }
               },
               icon: const Icon(Icons.location_on_outlined, size: 18),
               label: const Text('Change'),
@@ -110,6 +163,18 @@ class _CartScreenState extends State<CartScreen> {
                 return CartItemCard(
                   title: item['title']!,
                   imagePath: item['imagePath']!,
+                  productId: item['productId']!,
+                  initialQuantity: item['quantity'] ?? 1,
+                  // New properties
+                  price: item['price'] as double,
+                  oldPrice: item['oldPrice'] as double,
+                  onQuantityChanged: (newQty) {
+                    setState(() {
+                      item['quantity'] = newQty;
+                    });
+                  },
+                  dataService: _dataService,
+                  onRemove: () => refresh(),
                 );
               },
             ),
@@ -144,15 +209,15 @@ class _CartScreenState extends State<CartScreen> {
                 children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.start,
-                    children: const [
+                    children: [
                       Text(
                         'Subtotal',
                         style: TextStyle(fontSize: 18, color: Colors.black87),
                       ),
                       SizedBox(width: 8.0),
                       Text(
-                        '\$3,599',
-                        style: TextStyle(
+                        '\$${_subtotal.toStringAsFixed(0)}', // Display calculated subtotal
+                        style: const TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
                           color: Colors.black,
@@ -196,10 +261,20 @@ class _CartScreenState extends State<CartScreen> {
               ),
               child: ElevatedButton(
                 onPressed: () {
+                  if (_currentAddress == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Please choose a delivery address first'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                    return;
+                  }
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const CheckoutScreen(),
+                      builder: (context) =>
+                          CheckoutScreen(initialAddress: _selectedAddressMap),
                     ),
                   );
                 },
@@ -234,8 +309,26 @@ class CartItemCard extends StatefulWidget {
   // --- ADDED PROPERTIES ---
   final String title;
   final String imagePath;
+  final String productId;
+  final int initialQuantity;
+  final double price; // NEW
+  final double oldPrice; // NEW
+  final ValueChanged<int>? onQuantityChanged; // NEW
+  final DataService dataService;
+  final VoidCallback? onRemove;
 
-  const CartItemCard({super.key, required this.title, required this.imagePath});
+  const CartItemCard({
+    super.key,
+    required this.title,
+    required this.imagePath,
+    required this.productId,
+    required this.initialQuantity,
+    this.price = 0.0, // Default or required
+    this.oldPrice = 0.0, // Default
+    this.onQuantityChanged,
+    required this.dataService,
+    this.onRemove,
+  });
   // --- END OF ADDED PROPERTIES ---
 
   @override
@@ -245,17 +338,68 @@ class CartItemCard extends StatefulWidget {
 class _CartItemCardState extends State<CartItemCard> {
   int _quantity = 1;
 
-  void _incrementQuantity() {
+  @override
+  void initState() {
+    super.initState();
+    _quantity = widget.initialQuantity;
+  }
+
+  Future<void> _incrementQuantity() async {
+    final old = _quantity;
     setState(() {
       _quantity++;
     });
+    // Notify parent immediately for UI update
+    if (widget.onQuantityChanged != null) {
+      widget.onQuantityChanged!(_quantity);
+    }
+    try {
+      await widget.dataService.addToCart(widget.productId, quantity: _quantity);
+    } catch (e) {
+      setState(() {
+        _quantity = old;
+      });
+      // Revert in parent if failed
+      if (widget.onQuantityChanged != null) {
+        widget.onQuantityChanged!(_quantity);
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to update quantity: $e')),
+        );
+      }
+    }
   }
 
-  void _decrementQuantity() {
+  Future<void> _decrementQuantity() async {
     if (_quantity > 1) {
+      final old = _quantity;
       setState(() {
         _quantity--;
       });
+      // Notify parent
+      if (widget.onQuantityChanged != null) {
+        widget.onQuantityChanged!(_quantity);
+      }
+      try {
+        await widget.dataService.addToCart(
+          widget.productId,
+          quantity: _quantity,
+        );
+      } catch (e) {
+        setState(() {
+          _quantity = old;
+        });
+        // Revert parent
+        if (widget.onQuantityChanged != null) {
+          widget.onQuantityChanged!(_quantity);
+        }
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to update quantity: $e')),
+          );
+        }
+      }
     }
   }
 
@@ -319,18 +463,18 @@ class _CartItemCardState extends State<CartItemCard> {
                 ),
                 const SizedBox(height: 8.0),
                 Row(
-                  children: const [
+                  children: [
                     Text(
-                      '\$80',
-                      style: TextStyle(
+                      '\$${widget.price.toStringAsFixed(0)}', // Use widget.price
+                      style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    SizedBox(width: 8.0),
+                    const SizedBox(width: 8.0),
                     Text(
-                      '\$95',
-                      style: TextStyle(
+                      '\$${widget.oldPrice.toStringAsFixed(0)}', // Use widget.oldPrice
+                      style: const TextStyle(
                         fontSize: 14,
                         color: Colors.grey,
                         decoration: TextDecoration.lineThrough,
@@ -381,8 +525,24 @@ class _CartItemCardState extends State<CartItemCard> {
                       ],
                     ),
                     InkWell(
-                      onTap: () {
-                        print('Removing item...');
+                      onTap: () async {
+                        try {
+                          await widget.dataService.removeFromCart(
+                            widget.productId,
+                          );
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Item removed')),
+                            );
+                          }
+                          if (widget.onRemove != null) widget.onRemove!();
+                        } catch (e) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Failed to remove: $e')),
+                            );
+                          }
+                        }
                       },
                       borderRadius: BorderRadius.circular(4),
                       child: Padding(

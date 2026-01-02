@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'newcard_screen.dart';
-import 'bank_screen.dart'; // <-- 1. ADD THIS IMPORT
+import 'bank_screen.dart';
+import '../services/api_service.dart';
 
 class PaymentMethodScreen extends StatefulWidget {
   const PaymentMethodScreen({super.key});
@@ -10,7 +11,144 @@ class PaymentMethodScreen extends StatefulWidget {
 }
 
 class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
-  int _selectedCardId = 0;
+  // Unused but kept for structure if needed later; logic now relies on _groupValue returning full object.
+  // String? _selectedPaymentMethodId;
+
+  List<Map<String, dynamic>> _savedCards = [];
+  Map<String, dynamic>? _savedUpi;
+  Map<String, dynamic>? _savedWallet;
+
+  bool _isLoading = true;
+  final DataService _dataService = DataService();
+
+  // Controllers for UPI and Wallet
+  final TextEditingController _upiController = TextEditingController();
+  final TextEditingController _walletController = TextEditingController();
+
+  // Selection state
+  String _groupValue = '0';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPaymentMethods();
+  }
+
+  @override
+  void dispose() {
+    _upiController.dispose();
+    _walletController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadPaymentMethods() async {
+    final methods = await _dataService.getPaymentMethods();
+    if (mounted) {
+      setState(() {
+        // Filter Cards
+        _savedCards = methods
+            .where((m) => m['type_payment'] == 'cards')
+            .toList();
+
+        // Find existing UPI
+        try {
+          _savedUpi = methods.firstWhere((m) => m['type_payment'] == 'upi');
+          _upiController.text = _savedUpi!['upi_id'] ?? '';
+        } catch (_) {
+          _savedUpi = null;
+        }
+
+        // Find existing Wallet
+        try {
+          _savedWallet = methods.firstWhere(
+            (m) => m['type_payment'] == 'wallet',
+          );
+          _walletController.text = _savedWallet!['wallet_id'] ?? '+91';
+        } catch (_) {
+          _savedWallet = null;
+        }
+
+        _isLoading = false;
+
+        // Auto selection logic
+        if (_savedCards.isNotEmpty) {
+          _groupValue = _savedCards.first['id'];
+        } else {
+          _groupValue = '99'; // Default to COD
+        }
+      });
+    }
+  }
+
+  Future<void> _handleUpiContinue() async {
+    final enteredId = _upiController.text.trim();
+    if (enteredId.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please enter a UPI ID')));
+      return;
+    }
+
+    // Check if matches existing saved UPI
+    if (_savedUpi != null && _savedUpi!['upi_id'] == enteredId) {
+      Navigator.pop(context, _savedUpi);
+      return;
+    }
+
+    // Save as new UPI
+    setState(() => _isLoading = true);
+    try {
+      final newMethod = await _dataService.addPaymentMethod(
+        type: 'upi',
+        upiId: enteredId,
+      );
+      if (mounted) {
+        Navigator.pop(context, newMethod);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to save UPI: $e')));
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _handleWalletContinue() async {
+    final enteredId = _walletController.text.trim();
+    if (enteredId.isEmpty || enteredId == '+91') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a valid Wallet ID/Number')),
+      );
+      return;
+    }
+
+    // Check if matches existing saved Wallet
+    if (_savedWallet != null && _savedWallet!['wallet_id'] == enteredId) {
+      Navigator.pop(context, _savedWallet);
+      return;
+    }
+
+    // Save as new Wallet
+    setState(() => _isLoading = true);
+    try {
+      final newMethod = await _dataService.addPaymentMethod(
+        type: 'wallet',
+        walletId: enteredId,
+      );
+      if (mounted) {
+        Navigator.pop(context, newMethod);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to save Wallet: $e')));
+        setState(() => _isLoading = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -40,16 +178,21 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
                   ),
                 ),
                 TextButton.icon(
-                  onPressed: () {
-                    Navigator.push(
+                  onPressed: () async {
+                    final result = await Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (context) => const NewCardScreen(),
                       ),
                     );
+                    if (result == true) {
+                      _loadPaymentMethods();
+                    }
                   },
-                  icon:
-                      const Icon(Icons.add_circle_outline, color: Colors.black),
+                  icon: const Icon(
+                    Icons.add_circle_outline,
+                    color: Colors.black,
+                  ),
                   label: const Text(
                     'Add Card',
                     style: TextStyle(
@@ -75,53 +218,52 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Row(
               children: [
-                _CreditCardWidget(
-                  cardId: 0,
-                  groupValue: _selectedCardId,
-                  onChanged: (id) {
-                    setState(() {
-                      _selectedCardId = id!;
-                    });
-                  },
-                  cardType: 'CREDIT CARD',
-                  cardNumber: '**** **** **** 4532',
-                  cardHolder: 'ROOPA SMITH',
-                  expiryDate: '14/07',
-                  cvv: '012',
-                  color: Colors.black,
-                  logo: const Text(
-                    'VISA',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
+                if (_isLoading &&
+                    _savedCards.isEmpty) // Show loading only if init
+                  const Center(child: CircularProgressIndicator())
+                else if (_savedCards.isEmpty)
+                  Container(
+                    width: 300,
+                    height: 180,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[200],
+                      borderRadius: BorderRadius.circular(20),
                     ),
-                  ),
-                ),
-                const SizedBox(width: 16.0),
-                _CreditCardWidget(
-                  cardId: 1,
-                  groupValue: _selectedCardId,
-                  onChanged: (id) {
-                    setState(() {
-                      _selectedCardId = id!;
-                    });
-                  },
-                  cardType: 'DEBIT CARD',
-                  cardNumber: '**** **** **** 5678',
-                  cardHolder: 'ROOPA SMITH',
-                  expiryDate: '12/08',
-                  cvv: '321',
-                  color: Colors.grey[700]!,
-                  logo: const Text(
-                    'VISA',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
+                    alignment: Alignment.center,
+                    child: const Text('No cards added'),
+                  )
+                else
+                  ..._savedCards.map((card) {
+                    final String cardId = card['id'];
+                    final bool isSelected = _groupValue == cardId;
+
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 16.0),
+                      child: _CreditCardWidget(
+                        value: cardId,
+                        groupValue: _groupValue,
+                        onChanged: (val) {
+                          setState(() {
+                            _groupValue = val!;
+                          });
+                        },
+                        cardType: 'CREDIT CARD',
+                        cardNumber: card['card_number'] ?? '****',
+                        cardHolder: card['card_name'] ?? 'HOLDER',
+                        expiryDate: card['expiry_date'] ?? '--/--',
+                        cvv: '***',
+                        color: isSelected ? Colors.black : Colors.grey[700]!,
+                        logo: const Text(
+                          'VISA',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
               ],
             ),
           ),
@@ -134,11 +276,11 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
               children: [
                 // 1. Cash on Delivery
                 _ExpandablePaymentOption(
-                  id: 99,
-                  groupValue: _selectedCardId,
+                  id: '99',
+                  groupValue: _groupValue,
                   onChanged: (id) {
                     setState(() {
-                      _selectedCardId = id!;
+                      _groupValue = id!;
                     });
                   },
                   icon: Icons.attach_money,
@@ -148,18 +290,12 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
                     children: [
                       Text(
                         'Carry on your cash payment..',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[700],
-                        ),
+                        style: TextStyle(fontSize: 14, color: Colors.grey[700]),
                       ),
                       const SizedBox(height: 4.0),
                       Text(
                         'Thanx!',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[700],
-                        ),
+                        style: TextStyle(fontSize: 14, color: Colors.grey[700]),
                       ),
                     ],
                   ),
@@ -168,41 +304,48 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
 
                 // 2. Google Pay / UPI
                 _ExpandablePaymentOption(
-                  id: 100,
-                  groupValue: _selectedCardId,
+                  id: '100',
+                  groupValue: _groupValue,
                   onChanged: (id) {
                     setState(() {
-                      _selectedCardId = id!;
+                      _groupValue = id!;
+                      // Optionally autofill if existing when strictly selected
                     });
                   },
                   icon: Icons.payment,
                   title: 'Google Pay/Phone Pay/BHIM UPI',
-                  expandedContent: const _UpiContent(),
+                  expandedContent: _UpiContent(
+                    controller: _upiController,
+                    onContinue: _handleUpiContinue,
+                  ),
                 ),
                 const SizedBox(height: 16.0),
 
                 // 3. Payments/Wallet
                 _ExpandablePaymentOption(
-                  id: 101,
-                  groupValue: _selectedCardId,
+                  id: '101',
+                  groupValue: _groupValue,
                   onChanged: (id) {
                     setState(() {
-                      _selectedCardId = id!;
+                      _groupValue = id!;
                     });
                   },
                   icon: Icons.account_balance_wallet_outlined,
                   title: 'Payments/Wallet',
-                  expandedContent: const _WalletContent(),
+                  expandedContent: _WalletContent(
+                    controller: _walletController,
+                    onContinue: _handleWalletContinue,
+                  ),
                 ),
                 const SizedBox(height: 16.0),
 
                 // 4. Netbanking
                 _ExpandablePaymentOption(
-                  id: 102,
-                  groupValue: _selectedCardId,
+                  id: '102',
+                  groupValue: _groupValue,
                   onChanged: (id) {
                     setState(() {
-                      _selectedCardId = id!;
+                      _groupValue = id!;
                     });
                   },
                   icon: Icons.account_balance_outlined,
@@ -230,8 +373,70 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
         ),
         child: ElevatedButton(
           onPressed: () {
-            print('Continue pressed! Selected option ID: $_selectedCardId');
-            Navigator.pop(context);
+            // "Continue" logic for main screen
+            // If the user selected 'cards', we find it.
+            // If they selected '99', '100', '101', '102', we return that.
+            // Note: If they selected 100/101 but didn't click content's "Continue",
+            // we probably should assume they want to use the currently entered values?
+            // BUT per request "clicking continue on them [content] should work like main continue".
+            // So main continue handles 'saved' selections or static ones.
+            // If they typed a new UPI but clicked MAIN continue, that's ambiguous.
+            // For now, let's stick to the previous robust logic plus UPI/Wallet handling if they are selected.
+
+            Map<String, dynamic>? selectedMethod;
+
+            // 1. Check if cards
+            try {
+              selectedMethod = _savedCards.firstWhere(
+                (m) => m['id'] == _groupValue,
+              );
+            } catch (_) {}
+
+            // 2. Check if it matches our saved UPI id (which would be the groupValue if we assigned it that way, but we use '100')
+            // Actually, if we use '100' for UPI, we return a static object OR the saved upi object if available?
+
+            if (selectedMethod != null) {
+              Navigator.pop(context, selectedMethod);
+              return;
+            }
+
+            // Static / Other handling
+            if (_groupValue == '100') {
+              // If valid existing UPI, return it. Else return static generic.
+              if (_savedUpi != null) {
+                Navigator.pop(context, _savedUpi);
+              } else {
+                Navigator.pop(context, {
+                  'id': '100',
+                  'type_payment': 'static',
+                  'title': 'UPI',
+                });
+              }
+              return;
+            }
+            if (_groupValue == '101') {
+              if (_savedWallet != null) {
+                Navigator.pop(context, _savedWallet);
+              } else {
+                Navigator.pop(context, {
+                  'id': '101',
+                  'type_payment': 'static',
+                  'title': 'Wallet',
+                });
+              }
+              return;
+            }
+
+            // Fallback for COD / Netbanking
+            String title = 'Unknown';
+            if (_groupValue == '99') title = 'Cash on Delivery';
+            if (_groupValue == '102') title = 'Netbanking';
+
+            Navigator.pop(context, {
+              'id': _groupValue,
+              'type_payment': 'static',
+              'title': title,
+            });
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.black,
@@ -253,11 +458,12 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
   }
 }
 
-// --- _CreditCardWidget (Unchanged) ---
+// --- WIDGETS ---
+
 class _CreditCardWidget extends StatelessWidget {
-  final int cardId;
-  final int groupValue;
-  final ValueChanged<int?> onChanged;
+  final String value;
+  final String? groupValue;
+  final ValueChanged<String?> onChanged;
   final String cardType;
   final String cardNumber;
   final String cardHolder;
@@ -267,7 +473,7 @@ class _CreditCardWidget extends StatelessWidget {
   final Widget logo;
 
   const _CreditCardWidget({
-    required this.cardId,
+    required this.value,
     required this.groupValue,
     required this.onChanged,
     required this.cardType,
@@ -296,8 +502,8 @@ class _CreditCardWidget extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Radio<int>(
-                    value: cardId,
+                  Radio<String>(
+                    value: value,
                     groupValue: groupValue,
                     onChanged: onChanged,
                     activeColor: Colors.white,
@@ -386,11 +592,10 @@ class _CreditCardWidget extends StatelessWidget {
   }
 }
 
-// --- _ExpandablePaymentOption (Unchanged) ---
 class _ExpandablePaymentOption extends StatelessWidget {
-  final int id;
-  final int groupValue;
-  final ValueChanged<int?> onChanged;
+  final String id;
+  final String groupValue;
+  final ValueChanged<String?> onChanged;
   final IconData icon;
   final String title;
   final Widget expandedContent;
@@ -441,7 +646,7 @@ class _ExpandablePaymentOption extends StatelessWidget {
                         ),
                       ),
                     ),
-                    Radio<int>(
+                    Radio<String>(
                       value: id,
                       groupValue: groupValue,
                       onChanged: onChanged,
@@ -476,30 +681,23 @@ class _ExpandablePaymentOption extends StatelessWidget {
   }
 }
 
-// --- _NetbankingContent (MODIFIED) ---
 class _NetbankingContent extends StatelessWidget {
   const _NetbankingContent();
 
   @override
   Widget build(BuildContext context) {
     return OutlinedButton(
-      // --- 2. MODIFIED OnPressed ---
       onPressed: () {
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (context) => const BankScreen(),
-          ),
+          MaterialPageRoute(builder: (context) => const BankScreen()),
         );
       },
-      // --- END MODIFICATION ---
       style: OutlinedButton.styleFrom(
         foregroundColor: Colors.black,
         minimumSize: const Size(double.infinity, 50),
         side: BorderSide(color: Colors.grey[400]!),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8.0),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
       ),
       child: const Text(
         'Netbanking',
@@ -509,9 +707,11 @@ class _NetbankingContent extends StatelessWidget {
   }
 }
 
-// --- _WalletContent (Unchanged) ---
 class _WalletContent extends StatelessWidget {
-  const _WalletContent();
+  final TextEditingController controller;
+  final VoidCallback onContinue;
+
+  const _WalletContent({required this.controller, required this.onContinue});
 
   @override
   Widget build(BuildContext context) {
@@ -520,13 +720,11 @@ class _WalletContent extends StatelessWidget {
       children: [
         const Text(
           'Link Your Wallet',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-          ),
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
         ),
         const SizedBox(height: 12.0),
         TextFormField(
+          controller: controller,
           decoration: InputDecoration(
             hintText: '+91',
             border: OutlineInputBorder(
@@ -545,7 +743,7 @@ class _WalletContent extends StatelessWidget {
         ),
         const SizedBox(height: 12.0),
         ElevatedButton(
-          onPressed: () {},
+          onPressed: onContinue,
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.black,
             foregroundColor: Colors.white,
@@ -564,9 +762,11 @@ class _WalletContent extends StatelessWidget {
   }
 }
 
-// --- _UpiContent (Unchanged) ---
 class _UpiContent extends StatelessWidget {
-  const _UpiContent();
+  final TextEditingController controller;
+  final VoidCallback onContinue;
+
+  const _UpiContent({required this.controller, required this.onContinue});
 
   @override
   Widget build(BuildContext context) {
@@ -575,13 +775,11 @@ class _UpiContent extends StatelessWidget {
       children: [
         const Text(
           'Link via UPI',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-          ),
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
         ),
         const SizedBox(height: 12.0),
         TextFormField(
+          controller: controller,
           decoration: InputDecoration(
             hintText: 'Enter your UPI ID',
             border: OutlineInputBorder(
@@ -600,7 +798,7 @@ class _UpiContent extends StatelessWidget {
         ),
         const SizedBox(height: 12.0),
         ElevatedButton(
-          onPressed: () {},
+          onPressed: onContinue,
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.black,
             foregroundColor: Colors.white,
@@ -622,10 +820,7 @@ class _UpiContent extends StatelessWidget {
             Expanded(
               child: Text(
                 'Your UPI ID Will be encrypted and is 100% safe with us.',
-                style: TextStyle(
-                  color: Colors.grey[700],
-                  fontSize: 12,
-                ),
+                style: TextStyle(color: Colors.grey[700], fontSize: 12),
               ),
             ),
           ],

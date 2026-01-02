@@ -223,4 +223,172 @@ class DataService {
       return [];
     }
   }
+  // --- ADDRESSES ---
+
+  Future<void> addUserAddress({
+    required String title,
+    required String addressLine,
+    bool isDefault = false,
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) throw Exception('Must be logged in to add address');
+
+    try {
+      await _supabase.from('user_addresses').insert({
+        'user_id': user.id,
+        'title': title,
+        'address_line': addressLine,
+        'is_default': isDefault,
+        'created_at': DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+      throw Exception('Failed to add address: $e');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getUserAddresses() async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return [];
+
+    try {
+      final data = await _supabase
+          .from('user_addresses')
+          .select()
+          .eq('user_id', user.id)
+          .order('created_at', ascending: false);
+      return List<Map<String, dynamic>>.from(data);
+    } catch (e) {
+      print('Error fetching addresses: $e');
+      return [];
+    }
+  }
+
+  // --- PAYMENT METHODS ---
+
+  Future<Map<String, dynamic>> addPaymentMethod({
+    required String type, // 'card', 'upi', 'wallet', 'netbanking'
+    String? cardName,
+    String? cardNumber,
+    String? expiryDate,
+    String? cvv,
+    String? upiId,
+    String? walletId,
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) throw Exception('Must be logged in');
+
+    try {
+      final data = await _supabase
+          .from('payment_method')
+          .insert({
+            'user_id': user.id,
+            'type_payment': type,
+            'card_name': cardName,
+            'card_number': cardNumber,
+            'expiry_date': expiryDate, // Assuming date or string format in DB?
+            // Note: In real production, NEVER save CVV. But per request to fill DB:
+            'cvv': cvv,
+            'upi_id': upiId,
+            'wallet_id': walletId,
+            'created_at': DateTime.now().toIso8601String(),
+          })
+          .select()
+          .single();
+
+      return data;
+    } catch (e) {
+      throw Exception('Failed to add payment method: $e');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getPaymentMethods() async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return [];
+
+    try {
+      final data = await _supabase
+          .from('payment_method')
+          .select()
+          .eq('user_id', user.id)
+          .order('created_at', ascending: false);
+      return List<Map<String, dynamic>>.from(data);
+    } catch (e) {
+      print('Error fetching payment methods: $e');
+      return [];
+    }
+  }
+
+  // --- SUBMIT ORDER ---
+
+  Future<void> submitOrder() async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) throw Exception('Must be logged in');
+
+    try {
+      // 1. Fetch Cart Items
+      final cartItems = await getCartItems();
+      if (cartItems.isEmpty) return; // Or throw error
+
+      // 2. Calculate Total
+      double totalAmount = 0.0;
+      for (var item in cartItems) {
+        final product = item['products'] as Map<String, dynamic>;
+        double price = 0.0;
+        var p = product['price'];
+        if (p is int) {
+          price = p.toDouble();
+        } else if (p is double) {
+          price = p;
+        } else if (p is String) {
+          price = double.tryParse(p) ?? 0.0;
+        }
+        int quantity = (item['quantity'] as int?) ?? 1;
+        totalAmount += price * quantity;
+      }
+
+      // 3. Create Order
+      final orderData = await _supabase
+          .from('orders')
+          .insert({
+            'user_id': user.id,
+            'total_amount': totalAmount,
+            'status': 'indelivery', // Default status
+            'created_at': DateTime.now().toIso8601String(),
+          })
+          .select()
+          .single();
+
+      final orderId = orderData['id'];
+
+      // 4. Create Order Items
+      final orderItemsData = cartItems.map((item) {
+        final product = item['products'] as Map<String, dynamic>;
+
+        // Price at purchase
+        double price = 0.0;
+        var p = product['price'];
+        if (p is int)
+          price = p.toDouble();
+        else if (p is double)
+          price = p;
+        else if (p is String)
+          price = double.tryParse(p) ?? 0.0;
+
+        return {
+          'order_id': orderId,
+          'product_id': item['product_id'], // or product['id']
+          'quantity': item['quantity'],
+          'price_at_purchase': price,
+          'created_at': DateTime.now().toIso8601String(),
+        };
+      }).toList();
+
+      await _supabase.from('order_items').insert(orderItemsData);
+
+      // 5. Clear Cart
+      await _supabase.from('cart_items').delete().eq('user_id', user.id);
+    } catch (e) {
+      throw Exception('Failed to submit order: $e');
+    }
+  }
 }
