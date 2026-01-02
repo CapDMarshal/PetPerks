@@ -186,7 +186,11 @@ class _ProductListPageState extends State<ProductListPage> {
             }
           },
           child: ProductItemCard(
-            product: product,
+            productId: product['id'], // Pass product ID
+            name: product['name'],
+            price: product['price'],
+            oldPrice: product['oldPrice'],
+            imagePath: product['imagePath'],
           ),
         );
       },
