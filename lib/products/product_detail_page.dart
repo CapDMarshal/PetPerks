@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/api_service.dart';
 import '../cart/cart_screen.dart';
+import '../widgets/wishlist_icon_button.dart';
 import 'add_edit_product_page.dart';
 
 class ProductDetailPage extends StatefulWidget {
@@ -14,7 +15,6 @@ class ProductDetailPage extends StatefulWidget {
 }
 
 class _ProductDetailPageState extends State<ProductDetailPage> {
-  bool _isFavorite = false;
   int _quantity = 1;
   String _selectedSize = 'M';
   int _selectedColorIndex = 0;
@@ -217,29 +217,23 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                 Positioned(
                   top: 16,
                   right: 16,
-                  child: GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _isFavorite = !_isFavorite;
-                      });
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 8,
-                          ),
-                        ],
-                      ),
-                      child: Icon(
-                        _isFavorite ? Icons.favorite : Icons.favorite_border,
-                        color: Colors.grey.shade400,
-                        size: 24,
-                      ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 8,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                    child: WishlistIconButton(
+                      productId: widget.product['id'].toString(),
+                      size: 28,
+                      activeColor: Colors.red,
+                      inactiveColor: Colors.grey.shade600,
                     ),
                   ),
                 ),
