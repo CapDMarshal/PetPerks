@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
+import '../../services/api_service.dart';
 
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({super.key});
@@ -13,6 +16,110 @@ class _EditProfilePageState extends State<EditProfilePage> {
   final _mobileController = TextEditingController();
   final _emailController = TextEditingController();
   final _locationController = TextEditingController();
+  final DataService _dataService = DataService();
+  
+  bool _isLoading = false;
+  bool _isLoadingData = true;
+  String? _avatarUrl;
+  File? _imageFile;
+  final ImagePicker _picker = ImagePicker();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfileData();
+  }
+
+  Future<void> _loadProfileData() async {
+    try {
+      final profile = await _dataService.getProfile();
+      if (mounted) {
+        setState(() {
+          _fullNameController.text = profile['display_name'] ?? '';
+          _mobileController.text = profile['phone_number'] ?? '';
+          _emailController.text = profile['email'] ?? '';
+          _locationController.text = profile['location'] ?? '';
+          _avatarUrl = profile['avatar_url'];
+          _isLoadingData = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingData = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading profile: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _pickImage() async {
+    try {
+      final XFile? pickedFile = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 85,
+      );
+      
+      if (pickedFile != null) {
+        setState(() {
+          _imageFile = File(pickedFile.path);
+        });
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error picking image: $e')),
+      );
+    }
+  }
+
+  Future<void> _updateProfile() async {
+    if (!_formKey.currentState!.validate()) return;
+    
+    setState(() => _isLoading = true);
+    
+    try {
+      String? newAvatarUrl;
+      
+      // Upload new avatar if selected
+      if (_imageFile != null) {
+        newAvatarUrl = await _dataService.uploadAvatar(_imageFile!);
+      }
+      
+      // Update profile
+      await _dataService.updateProfile(
+        displayName: _fullNameController.text.trim(),
+        phoneNumber: _mobileController.text.trim(),
+        email: _emailController.text.trim(),
+        location: _locationController.text.trim(),
+        avatarUrl: newAvatarUrl,
+      );
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Profile updated successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.pop(context, true); // Return true to indicate success
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error updating profile: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -25,6 +132,26 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoadingData) {
+      return Scaffold(
+        backgroundColor: Colors.grey[50],
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          title: const Text(
+            'Edit Profile',
+            style: TextStyle(
+              color: Colors.black,
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          centerTitle: true,
+        ),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+    
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
@@ -62,12 +189,31 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(color: Colors.black, width: 3),
-                        image: const DecorationImage(
-                          image: NetworkImage(
-                            'https://via.placeholder.com/300x300/87CEEB/000000?text=Profile',
-                          ),
-                          fit: BoxFit.cover,
-                        ),
+                        color: Colors.grey[200],
+                      ),
+                      child: ClipOval(
+                        child: _imageFile != null
+                            ? Image.file(
+                                _imageFile!,
+                                fit: BoxFit.cover,
+                              )
+                            : _avatarUrl != null && _avatarUrl!.isNotEmpty
+                                ? Image.network(
+                                    _avatarUrl!,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return const Icon(
+                                        Icons.person,
+                                        size: 60,
+                                        color: Colors.grey,
+                                      );
+                                    },
+                                  )
+                                : const Icon(
+                                    Icons.person,
+                                    size: 60,
+                                    color: Colors.grey,
+                                  ),
                       ),
                     ),
                     Positioned(
@@ -86,12 +232,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                             color: Colors.white,
                             size: 16,
                           ),
-                          onPressed: () {
-                            // Handle image picker
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Image picker coming soon')),
-                            );
-                          },
+                          onPressed: _isLoading ? null : _pickImage,
                         ),
                       ),
                     ),
@@ -260,18 +401,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () {
-                      if (_formKey.currentState!.validate()) {
-                        // Handle profile update
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Profile updated successfully'),
-                            backgroundColor: Colors.green,
-                          ),
-                        );
-                        Navigator.pop(context);
-                      }
-                    },
+                    onPressed: _isLoading ? null : _updateProfile,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.black,
                       foregroundColor: Colors.white,
@@ -280,14 +410,24 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       elevation: 0,
+                      disabledBackgroundColor: Colors.grey,
                     ),
-                    child: const Text(
-                      'Update Profile',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    child: _isLoading
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                        : const Text(
+                            'Update Profile',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                   ),
                 ),
                 const SizedBox(height: 24),

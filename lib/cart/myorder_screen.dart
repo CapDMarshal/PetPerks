@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:petperks/profile/components/track-order.dart';
 import 'package:petperks/profile/components/reviews.dart';
 import '../services/api_service.dart';
@@ -15,11 +16,19 @@ class _MyOrderScreenState extends State<MyOrderScreen> {
   bool _isLoading = true;
   final DataService _dataService = DataService();
   List<Map<String, dynamic>> _allOrders = [];
+  Timer? _timer;
 
   @override
   void initState() {
     super.initState();
     _loadOrders();
+    _startAutoCompletionCheck();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadOrders() async {
@@ -30,6 +39,36 @@ class _MyOrderScreenState extends State<MyOrderScreen> {
         _isLoading = false;
       });
     }
+  }
+
+  void _startAutoCompletionCheck() {
+    _timer = Timer.periodic(const Duration(seconds: 5), (timer) async {
+      bool needsReload = false;
+      final now = DateTime.now();
+
+      for (var order in _allOrders) {
+        final String status = order['status'] ?? 'indelivery';
+        final String? createdAtStr = order['created_at'];
+
+        if (status == 'indelivery' && createdAtStr != null) {
+          final createdAt = DateTime.parse(createdAtStr);
+          if (now.difference(createdAt).inMinutes >= 1) {
+            // Auto-complete order
+            try {
+              await _dataService.updateOrderStatus(order['id'], 'delivered');
+              needsReload = true;
+              print('Order ${order['id']} auto-completed');
+            } catch (e) {
+              print('Error updating order status: $e');
+            }
+          }
+        }
+      }
+
+      if (needsReload) {
+        _loadOrders();
+      }
+    });
   }
 
   @override
@@ -61,6 +100,11 @@ class _MyOrderScreenState extends State<MyOrderScreen> {
         }
       }
     }
+
+    // Sort: 'indelivery' first, then by date descending (implicit from DB usually)
+    // But since we flatten, we might want to ensure ongoing is at top if mixed?
+    // Actually the tabs separate them.
+
 
     return Scaffold(
       backgroundColor: Colors.white,

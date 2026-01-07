@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:petperks/wishlist/wishlist_screen.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'components/notif.dart';
 import 'components/coupons.dart';
 
@@ -14,6 +12,7 @@ import '../search/search_screen.dart';
 import '../services/auth_service.dart';
 import '../services/api_service.dart'; // Contains DataService
 import '../auth/login_page.dart';
+import '../layout/main_layout.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -24,6 +23,7 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   String _displayName = 'User';
+  String? _avatarUrl;
   final DataService _dataService = DataService();
 
   @override
@@ -38,6 +38,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (mounted) {
         setState(() {
           _displayName = profile['display_name'] ?? 'User';
+          _avatarUrl = profile['avatar_url'];
         });
       }
     } catch (e) {
@@ -141,11 +142,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     decoration: BoxDecoration(
                       color: Colors.orange[300],
                       shape: BoxShape.circle,
+                      border: Border.all(color: Colors.grey.shade300, width: 2),
                     ),
-                    child: const Icon(
-                      Icons.pets,
-                      size: 30,
-                      color: Colors.white,
+                    child: ClipOval(
+                      child: _avatarUrl != null && _avatarUrl!.isNotEmpty
+                          ? Image.network(
+                              _avatarUrl!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return const Icon(
+                                  Icons.pets,
+                                  size: 30,
+                                  color: Colors.white,
+                                );
+                              },
+                            )
+                          : const Icon(
+                              Icons.pets,
+                              size: 30,
+                              color: Colors.white,
+                            ),
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -233,12 +249,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       'Wishlist',
                       Icons.favorite_outline,
                       onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const WishlistApp(),
-                          ),
-                        );
+                        // Find the MainLayoutState and switch to wishlist tab (index 1)
+                        final mainLayoutState = context.findAncestorStateOfType<MainLayoutState>();
+                        if (mainLayoutState != null) {
+                          mainLayoutState.switchToTab(1);
+                        }
                       },
                     ),
                   ),
@@ -256,13 +271,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 context,
                 'Edit Profile',
                 Icons.person_outline,
-                onTap: () {
-                  Navigator.push(
+                onTap: () async {
+                  final result = await Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (context) => const EditProfilePage(),
                     ),
                   );
+                  // Refresh profile data if edit was successful
+                  if (result == true) {
+                    _loadUserData();
+                  }
                 },
               ),
               _buildMenuItem(
@@ -344,81 +363,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   );
                 },
               ),
-              _buildMenuItem(
-                context,
-                'Logout',
-                Icons.logout,
-                onTap: () => _handleLogout(context),
-              ),
-              const SizedBox(height: 24),
             ],
           ),
         ),
       ),
     );
-  }
-
-  // Handle Logout
-  Future<void> _handleLogout(BuildContext context) async {
-    final authService = AuthService();
-
-    // Show confirmation dialog
-    final bool? confirm = await showDialog<bool>(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Logout'),
-          content: const Text('Are you sure you want to logout?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Logout', style: TextStyle(color: Colors.red)),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (confirm == true && context.mounted) {
-      try {
-        // Show loading
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) =>
-              const Center(child: CircularProgressIndicator()),
-        );
-
-        await authService.logout();
-
-        if (context.mounted) {
-          // Close loading dialog
-          Navigator.of(context).pop(); // Navigate to login page
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (context) => const LoginPage()),
-            (route) => false,
-          );
-        }
-      } catch (e) {
-        if (context.mounted) {
-          // Close loading dialog
-          Navigator.of(context).pop();
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'Logout failed: ${e.toString().replaceAll('Exception: ', '')}',
-              ),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
-    }
   }
 
   // MODIFIKASI: Menghapus Icon dari _buildActionCard

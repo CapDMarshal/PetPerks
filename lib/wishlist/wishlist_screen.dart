@@ -164,6 +164,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
+              
               const Text('Wishlist', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
               IconButton(icon: const Icon(Icons.search, size: 28), onPressed: () => _navigateToSearchScreen(context)),
             ],

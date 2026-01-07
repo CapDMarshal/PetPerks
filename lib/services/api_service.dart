@@ -26,6 +26,31 @@ class DataService {
     }
   }
 
+  Future<String> uploadAvatar(File imageFile) async {
+    try {
+      final user = _supabase.auth.currentUser;
+      if (user == null) throw Exception('No user logged in');
+      
+      final fileName = '${user.id}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final path = 'avatars/$fileName';
+
+      await _supabase.storage
+          .from('avatars')
+          .upload(
+            path,
+            imageFile,
+            fileOptions: const FileOptions(cacheControl: '3600', upsert: false),
+          );
+
+      final imageUrl = _supabase.storage
+          .from('avatars')
+          .getPublicUrl(path);
+      return imageUrl;
+    } catch (e) {
+      throw Exception('Failed to upload avatar: $e');
+    }
+  }
+
   // --- PROFILES ---
 
   Future<Map<String, dynamic>> getProfile() async {
@@ -52,17 +77,21 @@ class DataService {
   Future<void> updateProfile({
     String? displayName,
     String? phoneNumber,
-    String? address,
+    String? email,
+    String? location,
+    String? avatarUrl,
   }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) throw Exception('No user logged in');
 
-    final updates = {
+    final updates = <String, dynamic>{
       'id': user.id,
-      'updated_at': DateTime.now().toIso8601String(),
     };
     if (displayName != null) updates['display_name'] = displayName;
     if (phoneNumber != null) updates['phone_number'] = phoneNumber;
+    if (email != null) updates['email'] = email;
+    if (location != null) updates['location'] = location;
+    if (avatarUrl != null) updates['avatar_url'] = avatarUrl;
 
     await _supabase.from('profiles').upsert(updates);
 
@@ -221,6 +250,22 @@ class DataService {
     } catch (e) {
       print('Error fetching orders: $e');
       return [];
+    }
+  }
+
+  Future<void> updateOrderStatus(dynamic orderId, String status) async {
+    try {
+      final response = await _supabase
+          .from('orders')
+          .update({'status': status})
+          .eq('id', orderId)
+          .select();
+      
+      if (response.isEmpty) {
+        print('Warning: No order rows updated. Possible RLS policy violation or invalid ID.');
+      }
+    } catch (e) {
+      throw Exception('Failed to update order status: $e');
     }
   }
   // --- ADDRESSES ---
@@ -389,6 +434,76 @@ class DataService {
       await _supabase.from('cart_items').delete().eq('user_id', user.id);
     } catch (e) {
       throw Exception('Failed to submit order: $e');
+    }
+  }
+
+  // --- COUPONS ---
+
+  // Get user's collected coupons with details
+  Future<List<Map<String, dynamic>>> getUserCoupons() async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return [];
+
+    try {
+      final data = await _supabase
+          .from('user_coupons')
+          .select('*, coupons(*)')
+          .eq('user_id', user.id)
+          .eq('is_used', false)
+          .order('collected_at', ascending: false);
+      return List<Map<String, dynamic>>.from(data);
+    } catch (e) {
+      print('Error fetching user coupons: $e');
+      return [];
+    }
+  }
+
+  // Get all available coupons
+  Future<List<Map<String, dynamic>>> getAvailableCoupons() async {
+    try {
+      final now = DateTime.now().toIso8601String();
+      final data = await _supabase
+          .from('coupons')
+          .select()
+          .eq('is_active', true)
+          .or('valid_until.is.null,valid_until.gte.$now');
+      return List<Map<String, dynamic>>.from(data);
+    } catch (e) {
+      print('Error fetching available coupons: $e');
+      return [];
+    }
+  }
+
+  // Collect a coupon
+  Future<void> collectCoupon(String couponId) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) throw Exception('Please login to collect coupons');
+
+    try {
+      await _supabase.from('user_coupons').insert({
+        'user_id': user.id,
+        'coupon_id': couponId,
+        'collected_at': DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+      throw Exception('Failed to collect coupon: $e');
+    }
+  }
+
+  // Get featured offers
+  Future<List<Map<String, dynamic>>> getFeaturedOffers() async {
+    try {
+      final now = DateTime.now().toIso8601String();
+      final data = await _supabase
+          .from('featured_offers')
+          .select()
+          .eq('is_active', true)
+          .or('valid_until.is.null,valid_until.gte.$now')
+          .order('display_order', ascending: true);
+      return List<Map<String, dynamic>>.from(data);
+    } catch (e) {
+      print('Error fetching featured offers: $e');
+      return [];
     }
   }
 }

@@ -8,6 +8,7 @@ import '../wishlist/wishlist_screen.dart';
 import '../cart/cart_screen.dart';
 import '../profile/profile_screen.dart';
 import '../category/category_screen.dart';
+import '../auth/login_page.dart';
 
 void main() {
   runApp(const PetPerksApp());
@@ -53,12 +54,13 @@ class _HomePageContentState extends State<HomePageContent> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   bool _isLoading = true; // Untuk Preloader
   String _displayName = 'Guest'; // Default display name
+  String _email = 'guest@example.com'; // Default email
 
   @override
   void initState() {
     super.initState();
-    _loadUserData();
-    // Mensimulasikan waktu loading (preloader)
+    _setupAuthListener();
+    // Simulate loading time (preloader)
     Future.delayed(const Duration(seconds: 2), () {
       if (mounted) {
         setState(() {
@@ -68,14 +70,24 @@ class _HomePageContentState extends State<HomePageContent> {
     });
   }
 
-  // Load user data from Supabase Auth
-  Future<void> _loadUserData() async {
-    final user = Supabase.instance.client.auth.currentUser;
-    if (user != null) {
-      setState(() {
-        _displayName = user.userMetadata?['display_name'] ?? 'Guest';
-      });
-    }
+  void _setupAuthListener() {
+    // Listen to auth state changes
+    Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      final Session? session = data.session;
+      final User? user = session?.user ?? Supabase.instance.client.auth.currentUser;
+
+      if (mounted) {
+        setState(() {
+          if (user != null) {
+            _displayName = user.userMetadata?['display_name'] ?? 'Guest';
+            _email = user.email ?? 'guest@example.com';
+          } else {
+            _displayName = 'Guest';
+            _email = 'guest@example.com';
+          }
+        });
+      }
+    });
   }
 
   @override
@@ -116,14 +128,11 @@ class _HomePageContentState extends State<HomePageContent> {
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: Image.asset(
-                  'assets/images/avatar/1.png', // Ganti dengan path aset
-                  width: 35,
-                  height: 35,
-                  fit: BoxFit.cover,
-                  // Tampilkan placeholder jika gambar error
-                  errorBuilder: (context, error, stackTrace) =>
-                      const Icon(Icons.person, size: 30),
+                child: Container(
+                  width: 30,
+                  height: 30,
+                  color: Colors.grey[200],
+                  child: const Icon(Icons.person, size: 24, color: Colors.grey),
                 ),
               ),
               const SizedBox(width: 8),
@@ -213,17 +222,17 @@ class _HomePageContentState extends State<HomePageContent> {
                   ),
                 ),
                 const SizedBox(width: 15),
-                const Column(
+                Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      "TEst",
-                      style: TextStyle(
+                      "$_displayName",
+                      style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    Text("example@gmail.com", style: TextStyle(fontSize: 14)),
+                    Text(_email, style: const TextStyle(fontSize: 14)),
                   ],
                 ),
               ],
@@ -301,12 +310,44 @@ class _HomePageContentState extends State<HomePageContent> {
                   Icons.logout,
                   "Logout",
                   onTap: () {
-                    Navigator.pop(context);
-                    // TODO: Add logout logic
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Logout functionality coming soon'),
-                        duration: Duration(seconds: 2),
+                    Navigator.pop(context); // Close drawer
+                    showDialog(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Logout'),
+                        content: const Text('Are you sure you want to logout?'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('Cancel'),
+                          ),
+                          TextButton(
+                            onPressed: () async {
+                              Navigator.pop(context); // Close dialog
+                              try {
+                                await Supabase.instance.client.auth.signOut();
+                                if (context.mounted) {
+                                  Navigator.of(context).pushAndRemoveUntil(
+                                    MaterialPageRoute(
+                                      builder: (_) => const LoginPage(),
+                                    ),
+                                    (route) => false,
+                                  );
+                                }
+                              } catch (e) {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Error logging out: $e')),
+                                  );
+                                }
+                              }
+                            },
+                            child: const Text(
+                              'Logout',
+                              style: TextStyle(color: Colors.red),
+                            ),
+                          ),
+                        ],
                       ),
                     );
                   },

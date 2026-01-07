@@ -11,10 +11,10 @@ class MainLayout extends StatefulWidget {
   const MainLayout({super.key});
 
   @override
-  State<MainLayout> createState() => _MainLayoutState();
+  State<MainLayout> createState() => MainLayoutState();
 }
 
-class _MainLayoutState extends State<MainLayout> {
+class MainLayoutState extends State<MainLayout> {
   int _selectedIndex = 0;
 
   // List of screens to display
@@ -33,6 +33,11 @@ class _MainLayoutState extends State<MainLayout> {
       const CategoryScreen(),
       const ProfileScreen(),
     ];
+  }
+
+  // Public method to switch tabs from child widgets
+  void switchToTab(int index) {
+    _onItemTapped(index);
   }
 
   void _onItemTapped(int index) {

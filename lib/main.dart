@@ -1,7 +1,7 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'supabase_config.dart';
-import 'auth/login_page.dart';
+import 'auth/onboarding_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,7 +33,7 @@ class PetPerksApp extends StatelessWidget {
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
       // Temporary: Always show login page until Firebase is configured
-      home: const LoginPage(),
+      home: const OnboardingScreen(),
       debugShowCheckedModeBanner: false,
     );
   }
