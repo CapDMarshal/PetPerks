@@ -138,10 +138,15 @@ class ProductItemCard extends StatelessWidget {
                     // Cart Button
                     GestureDetector(
                       onTap: () async {
+                        if (productId == null || productId!.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Product ID not available')),
+                          );
+                          return;
+                        }
                         try {
                           final ds = DataService();
-                          await ds.addToCart(widget.product['id']);
-                          if (!mounted) return;
+                          await ds.addToCart(productId!);
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(content: Text('Added to cart')),
                           );
