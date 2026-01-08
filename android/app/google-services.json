@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "1097568563666",
+    "project_id": "petperks-c209c",
+    "storage_bucket": "petperks-c209c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1097568563666:android:4c5819bfeeaa188595980b",
+        "android_client_info": {
+          "package_name": "com.example.petperks"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1097568563666-vql6ih7s470dr3tbo2r30mnfrdsl8i5s.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA35fXiVqn4I3TXnh3hQuQZotUlMAZ8jQs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1097568563666-vql6ih7s470dr3tbo2r30mnfrdsl8i5s.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "1097568563666-t2pra0ef8n4vesi0d1bolnrbik02s0e0.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.petperks"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -57,6 +57,7 @@ class _HomePageContentState extends State<HomePageContent> {
   bool _isLoading = true; // Untuk Preloader
   String _displayName = 'Guest'; // Default display name
   String _email = 'guest@example.com'; // Default email
+  String? _avatarUrl;
 
   @override
   void initState() {
@@ -72,22 +73,46 @@ class _HomePageContentState extends State<HomePageContent> {
     });
   }
 
+  final DataService _dataService = DataService();
+
   void _setupAuthListener() {
     // Listen to auth state changes
-    Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+    Supabase.instance.client.auth.onAuthStateChange.listen((data) async {
       final Session? session = data.session;
       final User? user = session?.user ?? Supabase.instance.client.auth.currentUser;
 
       if (mounted) {
-        setState(() {
-          if (user != null) {
-            _displayName = user.userMetadata?['display_name'] ?? 'Guest';
+        if (user != null) {
+          // Try to get from metadata first for immediate feedback
+          String name = user.userMetadata?['display_name'] ?? 
+                       user.userMetadata?['full_name'] ?? 
+                       user.userMetadata?['name'] ?? 
+                       'Guest';
+          
+          setState(() {
+            _displayName = name;
             _email = user.email ?? 'guest@example.com';
-          } else {
+          });
+
+          // Fetch full profile from DB to be accurate
+          try {
+            final profile = await _dataService.getProfile();
+             if (mounted) {
+              setState(() {
+                _displayName = profile['display_name'] ?? name;
+                _avatarUrl = profile['avatar_url']; 
+              });
+            }
+          } catch (e) {
+            print('Error fetching profile on home: $e');
+          }
+
+        } else {
+          setState(() {
             _displayName = 'Guest';
             _email = 'guest@example.com';
-          }
-        });
+          });
+        }
       }
     });
   }
@@ -134,7 +159,14 @@ class _HomePageContentState extends State<HomePageContent> {
                   width: 30,
                   height: 30,
                   color: Colors.grey[200],
-                  child: const Icon(Icons.person, size: 24, color: Colors.grey),
+                  child: _avatarUrl != null && _avatarUrl!.isNotEmpty
+                      ? Image.network(
+                          _avatarUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const Icon(Icons.person, size: 24, color: Colors.grey),
+                        )
+                      : const Icon(Icons.person, size: 24, color: Colors.grey),
                 ),
               ),
               const SizedBox(width: 8),
@@ -214,14 +246,23 @@ class _HomePageContentState extends State<HomePageContent> {
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(50),
-                  child: Image.asset(
-                    'assets/images/avatar/chat/2.png', // Ganti path
-                    width: 60,
-                    height: 60,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) =>
-                        const Icon(Icons.person, size: 60),
-                  ),
+                  child: _avatarUrl != null && _avatarUrl!.isNotEmpty
+                      ? Image.network(
+                          _avatarUrl!,
+                          width: 60,
+                          height: 60,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const Icon(Icons.person, size: 60),
+                        )
+                      : Image.asset(
+                          'assets/images/avatar/chat/2.png', // Fallback local
+                          width: 60,
+                          height: 60,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const Icon(Icons.person, size: 60),
+                        ),
                 ),
                 const SizedBox(width: 15),
                 Column(
@@ -315,28 +356,34 @@ class _HomePageContentState extends State<HomePageContent> {
                     Navigator.pop(context); // Close drawer
                     showDialog(
                       context: context,
-                      builder: (context) => AlertDialog(
+                      builder: (dialogContext) => AlertDialog(
                         title: const Text('Logout'),
                         content: const Text('Are you sure you want to logout?'),
                         actions: [
                           TextButton(
-                            onPressed: () => Navigator.pop(context),
+                            onPressed: () => Navigator.pop(dialogContext),
                             child: const Text('Cancel'),
                           ),
                           TextButton(
                             onPressed: () async {
-                              Navigator.pop(context); // Close dialog
+                              // Capture the navigator from the PARENT context (the page), not the dialog
+                              final navigator = Navigator.of(context);
+                              
+                              Navigator.pop(dialogContext); // Close dialog
+                              
                               try {
+                                // Sign out from Supabase
                                 await Supabase.instance.client.auth.signOut();
-                                if (context.mounted) {
-                                  Navigator.of(context).pushAndRemoveUntil(
-                                    MaterialPageRoute(
-                                      builder: (_) => const LoginPage(),
-                                    ),
-                                    (route) => false,
-                                  );
-                                }
+                                
+                                // Navigate immediately using the captured navigator
+                                navigator.pushAndRemoveUntil(
+                                  MaterialPageRoute(
+                                    builder: (_) => const LoginPage(),
+                                  ),
+                                  (route) => false,
+                                );
                               } catch (e) {
+                                print('Error logging out: $e');
                                 if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(content: Text('Error logging out: $e')),
