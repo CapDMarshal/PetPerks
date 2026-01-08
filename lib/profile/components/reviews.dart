@@ -1,7 +1,15 @@
 import 'package:flutter/material.dart';
+import '../../services/api_service.dart';
 
 class WriteReviewPage extends StatefulWidget {
-  const WriteReviewPage({super.key});
+  final Map<String, dynamic> product;
+  final Map<String, dynamic>? existingReview; // Add this
+
+  const WriteReviewPage({
+    super.key, 
+    required this.product, 
+    this.existingReview, // Add this
+  });
 
   @override
   State<WriteReviewPage> createState() => _WriteReviewPageState();
@@ -9,11 +17,26 @@ class WriteReviewPage extends StatefulWidget {
 
 class _WriteReviewPageState extends State<WriteReviewPage> {
   final _formKey = GlobalKey<FormState>();
-  final _reviewTitleController = TextEditingController();
-  final _productReviewController = TextEditingController();
+  late TextEditingController _reviewTitleController;
+  late TextEditingController _productReviewController;
+  final DataService _dataService = DataService();
   
-  double _rating = 4.0;
+  double _rating = 5.0;
   bool _wouldRecommend = true;
+  bool _isSubmitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Pre-fill if editing
+    final review = widget.existingReview;
+    _reviewTitleController = TextEditingController(text: review?['title'] ?? '');
+    _productReviewController = TextEditingController(text: review?['comment'] ?? '');
+    if (review != null) {
+      _rating = (review['rating'] as num).toDouble();
+      _wouldRecommend = review['is_recommended'] ?? true;
+    }
+  }
 
   @override
   void dispose() {
@@ -22,8 +45,73 @@ class _WriteReviewPageState extends State<WriteReviewPage> {
     super.dispose();
   }
 
+  Future<void> _submitReview() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    try {
+      if (widget.existingReview != null) {
+        // Update existing review
+        await _dataService.updateReview(
+          reviewId: widget.existingReview!['id'].toString(),
+          rating: _rating,
+          title: _reviewTitleController.text,
+          comment: _productReviewController.text,
+          isRecommended: _wouldRecommend,
+        );
+      } else {
+        // Create new review
+        await _dataService.submitReview(
+          productId: widget.product['id'],
+          rating: _rating,
+          title: _reviewTitleController.text,
+          comment: _productReviewController.text,
+          isRecommended: _wouldRecommend,
+        );
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(widget.existingReview != null 
+              ? 'Review updated successfully!' 
+              : 'Review submitted successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.pop(context, true); // Return true to indicate success
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Extract product details safely
+    final String name = widget.product['name'] ?? 'Unknown Product';
+    final double price = (widget.product['price'] is int) 
+        ? (widget.product['price'] as int).toDouble() 
+        : (widget.product['price'] as double? ?? 0.0);
+    final String imageUrl = widget.product['image_url'] ?? '';
+    final String category = widget.product['category'] ?? 'General';
+
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
@@ -33,23 +121,15 @@ class _WriteReviewPageState extends State<WriteReviewPage> {
           icon: const Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          'Write Review',
-          style: TextStyle(
+        title: Text(
+          widget.existingReview != null ? 'Edit Review' : 'Write Review',
+          style: const TextStyle(
             color: Colors.black,
             fontSize: 22,
             fontWeight: FontWeight.bold,
           ),
         ),
         centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.home_outlined, color: Colors.black),
-            onPressed: () {
-              Navigator.popUntil(context, (route) => route.isFirst);
-            },
-          ),
-        ],
       ),
       body: SingleChildScrollView(
         child: Padding(
@@ -87,13 +167,14 @@ class _WriteReviewPageState extends State<WriteReviewPage> {
                         ),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(10),
-                          child: Image.network(
-                            'https://via.placeholder.com/200x200/FFE0B2/000000?text=Dog+Belt',
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return const Icon(Icons.pets, size: 50);
-                            },
-                          ),
+                          child: imageUrl.isNotEmpty
+                              ? Image.network(
+                                  imageUrl,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      const Icon(Icons.pets, size: 50),
+                                )
+                              : const Icon(Icons.pets, size: 50),
                         ),
                       ),
                       const SizedBox(width: 16),
@@ -102,60 +183,30 @@ class _WriteReviewPageState extends State<WriteReviewPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              'Dog Body Belt',
-                              style: TextStyle(
+                            Text(
+                              name,
+                              style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.black,
                               ),
                             ),
                             const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                const Text(
-                                  '\$80',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.black,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  '\$95',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    decoration: TextDecoration.lineThrough,
-                                    color: Colors.grey[500],
-                                  ),
-                                ),
-                                const Spacer(),
-                                const Text(
-                                  'Qty: 2',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            const Text(
-                              'In Delivery',
-                              style: TextStyle(
-                                fontSize: 12,
+                            Text(
+                              '\$${price.toStringAsFixed(2)}',
+                              style: const TextStyle(
+                                fontSize: 14,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.green,
+                                color: Colors.black,
                               ),
                             ),
-                            const SizedBox(height: 4),
-                            const Text(
-                              '40% Off',
+                            const SizedBox(height: 8),
+                            Text(
+                              category,
                               style: TextStyle(
                                 fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.red,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.grey[600],
                               ),
                             ),
                           ],
@@ -179,7 +230,7 @@ class _WriteReviewPageState extends State<WriteReviewPage> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Your Average Rating Is ${_rating.toStringAsFixed(1)}',
+                        'Your Rating Is ${_rating.toStringAsFixed(1)}',
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.grey[600],
@@ -225,12 +276,15 @@ class _WriteReviewPageState extends State<WriteReviewPage> {
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: _reviewTitleController,
+                  validator: (value) =>
+                      value == null || value.isEmpty ? 'Please enter a title' : null,
                   decoration: InputDecoration(
                     filled: true,
                     fillColor: Colors.white,
+                    hintText: 'e.g., Amazing Product!',
                     contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 10,
+                      horizontal: 10,
+                      vertical: 5,
                     ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -260,12 +314,15 @@ class _WriteReviewPageState extends State<WriteReviewPage> {
                 TextFormField(
                   controller: _productReviewController,
                   maxLines: 6,
+                  validator: (value) =>
+                      value == null || value.isEmpty ? 'Please enter your review' : null,
                   decoration: InputDecoration(
                     filled: true,
                     fillColor: Colors.white,
+                    hintText: 'Write your thoughts about the product...',
                     contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 10,
+                      horizontal: 10,
+                      vertical: 5,
                     ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -281,7 +338,7 @@ class _WriteReviewPageState extends State<WriteReviewPage> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
                 // Would you recommend this product to a friend?
                 const Text(
                   'Would you recommend this product to a friend?',
@@ -333,7 +390,7 @@ class _WriteReviewPageState extends State<WriteReviewPage> {
                         ],
                       ),
                     ),
-                    const SizedBox(width: 32),
+                    const SizedBox(width: 24),
                     GestureDetector(
                       onTap: () {
                         setState(() {
@@ -375,22 +432,12 @@ class _WriteReviewPageState extends State<WriteReviewPage> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 40),
+                const SizedBox(height: 20),
                 // Submit Review Button
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () {
-                      if (_formKey.currentState!.validate()) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Review submitted successfully'),
-                            backgroundColor: Colors.green,
-                          ),
-                        );
-                        Navigator.pop(context);
-                      }
-                    },
+                    onPressed: _isSubmitting ? null : _submitReview,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.black,
                       foregroundColor: Colors.white,
@@ -400,13 +447,19 @@ class _WriteReviewPageState extends State<WriteReviewPage> {
                       ),
                       elevation: 0,
                     ),
-                    child: const Text(
-                      'Submit Review',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    child: _isSubmitting 
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                        )
+                      : Text(
+                          widget.existingReview != null ? 'Update Review' : 'Submit Review',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                   ),
                 ),
                 const SizedBox(height: 24),

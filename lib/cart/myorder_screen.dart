@@ -16,12 +16,13 @@ class _MyOrderScreenState extends State<MyOrderScreen> {
   bool _isLoading = true;
   final DataService _dataService = DataService();
   List<Map<String, dynamic>> _allOrders = [];
+  Set<String> _reviewedProductIds = {}; // Track reviewed products
   Timer? _timer;
 
   @override
   void initState() {
     super.initState();
-    _loadOrders();
+    _loadData(); // Changed name to reflect multiple data sources
     _startAutoCompletionCheck();
   }
 
@@ -31,18 +32,31 @@ class _MyOrderScreenState extends State<MyOrderScreen> {
     super.dispose();
   }
 
-  Future<void> _loadOrders() async {
-    final orders = await _dataService.getOrders();
-    if (mounted) {
-      setState(() {
-        _allOrders = orders;
-        _isLoading = false;
-      });
+  Future<void> _loadData() async {
+    setState(() => _isLoading = true);
+    try {
+      final orders = await _dataService.getOrders();
+      final reviews = await _dataService.getUserReviews();
+      
+      final reviewedIds = reviews
+          .map((r) => r['product_id'] as String)
+          .toSet();
+
+      if (mounted) {
+        setState(() {
+          _allOrders = orders;
+          _reviewedProductIds = reviewedIds;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Error loading data: $e');
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   void _startAutoCompletionCheck() {
-    _timer = Timer.periodic(const Duration(seconds: 5), (timer) async {
+    _timer = Timer.periodic(const Duration(seconds: 60), (timer) async {
       bool needsReload = false;
       final now = DateTime.now();
 
@@ -51,22 +65,38 @@ class _MyOrderScreenState extends State<MyOrderScreen> {
         final String? createdAtStr = order['created_at'];
 
         if (status == 'indelivery' && createdAtStr != null) {
-          final createdAt = DateTime.parse(createdAtStr);
-          if (now.difference(createdAt).inMinutes >= 1) {
+          // Robust checking: Convert both to UTC
+          final createdAt = DateTime.parse(createdAtStr).toUtc();
+          final nowUtc = DateTime.now().toUtc();
+          final minutesDiff = nowUtc.difference(createdAt).inMinutes;
+
+          print('DEBUG: Order ${order['id']} diff: $minutesDiff mins. Created: $createdAt, Now: $nowUtc');
+
+          // Change to 5 minutes as implied by user ("more than 5 minutes") 
+          // or keep 1 if that was intended. User complaint implies they expect it to happen by 5 mins.
+          // Let's set it to 5 to match the user's mention, or stick to logic. 
+          // If the code had 1, it should have happened ALREADY. 
+          // I will stick to the existing logic '1' for now but fix the comparison. 
+          // Actually, let's bump to 5 if that's what a "production" app would do, 
+          // but the user asked "why it didn't update", confusing. 
+          // Let's keep 1 for faster testing, but ensure logging.
+          
+          if (minutesDiff >= 1) { 
             // Auto-complete order
             try {
+              print('DEBUG: Attempting to auto-complete order ${order['id']}');
               await _dataService.updateOrderStatus(order['id'], 'delivered');
               needsReload = true;
-              print('Order ${order['id']} auto-completed');
+              print('SUCCESS: Order ${order['id']} auto-completed to delivered');
             } catch (e) {
-              print('Error updating order status: $e');
+              print('ERROR: Failed to auto-complete order: $e');
             }
           }
         }
       }
 
       if (needsReload) {
-        _loadOrders();
+        _loadData();
       }
     });
   }
@@ -87,15 +117,20 @@ class _MyOrderScreenState extends State<MyOrderScreen> {
       }
 
       if (match) {
-        final items = order['order_items'] as List<dynamic>? ?? [];
+          final items = order['order_items'] as List<dynamic>? ?? [];
         for (var item in items) {
           final product = item['products'] as Map<String, dynamic>?;
+          print('DEBUG: Product data: $product'); // Debugging image issue
+          final productId = product?['id'] as String?;
+          final isReviewed = productId != null && _reviewedProductIds.contains(productId);
+
           displayItems.add({
             'title': product?['name'] ?? 'Unknown Product',
             'price': item['price_at_purchase'].toString(),
             'quantity': item['quantity'],
             'status': status,
-            // 'icon': Icons.pets, // Could be dynamic if we had category
+            'product': product,
+            'isReviewed': isReviewed,
           });
         }
       }
@@ -169,10 +204,14 @@ class _MyOrderScreenState extends State<MyOrderScreen> {
                               title: item['title'],
                               icon: Icons.shopping_bag,
                               imageColor: const Color(0xFFD4E5E2),
+                              imageUrl: item['product']?['image_url'],
                               isOngoing: _isOngoingSelected,
                               price: item['price'],
                               itemCount: item['quantity'],
                               status: item['status'],
+                              product: item['product'],
+                              isReviewed: item['isReviewed'] ?? false,
+                              onReviewSubmitted: _loadData, // Pass reload callback
                             );
                           },
                         ),
@@ -240,19 +279,27 @@ class _OrderItemCard extends StatelessWidget {
   final String title;
   final IconData icon;
   final Color imageColor;
+  final String? imageUrl;
   final bool isOngoing;
   final String price;
   final int itemCount;
   final String status;
+  final Map<String, dynamic>? product;
+  final bool isReviewed;
+  final VoidCallback? onReviewSubmitted; // Add callback
 
   const _OrderItemCard({
     required this.title,
     required this.icon,
     required this.imageColor,
+    this.imageUrl,
     required this.isOngoing,
     required this.price,
     required this.itemCount,
     required this.status,
+    this.product,
+    this.isReviewed = false,
+    this.onReviewSubmitted, // Add to constructor
   });
 
   @override
@@ -270,7 +317,24 @@ class _OrderItemCard extends StatelessWidget {
               color: imageColor,
               borderRadius: BorderRadius.circular(12.0),
             ),
-            child: Icon(icon, size: 50, color: Colors.black54),
+            child: imageUrl != null && imageUrl!.isNotEmpty
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(12.0),
+                    child: imageUrl!.startsWith('assets/')
+                        ? Image.asset(
+                            imageUrl!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                Icon(icon, size: 50, color: Colors.black54),
+                          )
+                        : Image.network(
+                            imageUrl!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                Icon(icon, size: 50, color: Colors.black54),
+                          ),
+                  )
+                : Icon(icon, size: 50, color: Colors.black54),
           ),
           const SizedBox(width: 16.0),
 
@@ -332,7 +396,7 @@ class _OrderItemCard extends StatelessWidget {
                       )
                     else
                       Container(),
-
+                    
                     ElevatedButton(
                       onPressed: () {
                         if (isOngoing) {
@@ -342,15 +406,35 @@ class _OrderItemCard extends StatelessWidget {
                             ),
                           );
                         } else {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) => const WriteReviewPage(),
-                            ),
-                          );
+                          // If reviewed, maybe just show a snackbar or navigate to edit?
+                          if (isReviewed) {
+                             ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('You have already reviewed this product. Check "Reviews" in Profile to edit.')),
+                            );
+                            return;
+                          }
+
+                          // Ensure we have valid product data
+                          if (product != null && product!['id'] != null) {
+                             Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => WriteReviewPage(product: product!),
+                              ),
+                            ).then((value) {
+                              // Reload if value is true (submitted)
+                              if (value == true || true) { // Reload anyway to be safe
+                                onReviewSubmitted?.call();
+                              }
+                            });
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Cannot review this product')),
+                            );
+                          }
                         }
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.black,
+                        backgroundColor: isReviewed ? Colors.green : Colors.black,
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8.0),
@@ -365,7 +449,11 @@ class _OrderItemCard extends StatelessWidget {
                         ),
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
-                      child: Text(isOngoing ? 'Track Order' : 'Write Review'),
+                      child: Text(
+                        isOngoing 
+                          ? 'Track Order' 
+                          : (isReviewed ? 'Reviewed' : 'Write Review')
+                      ),
                     ),
                   ],
                 ),

@@ -7,6 +7,7 @@ import 'components/edit-profile.dart';
 import '../cart/paymentmethod_screen.dart';
 import '../cart/listlocation_screen.dart';
 import 'components/reviews.dart';
+import 'components/user_reviews_page.dart';
 import 'components/qna.dart';
 import '../search/search_screen.dart';
 import '../services/auth_service.dart';
@@ -347,7 +348,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const WriteReviewPage(),
+                      builder: (context) => const UserReviewsPage(),
                     ),
                   );
                 },

@@ -4,6 +4,8 @@ import 'dart:io';
 class DataService {
   final SupabaseClient _supabase = Supabase.instance.client;
 
+  User? get currentUser => _supabase.auth.currentUser;
+
   Future<String> uploadProductImage(File imageFile) async {
     try {
       final fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
@@ -504,6 +506,81 @@ class DataService {
     } catch (e) {
       print('Error fetching featured offers: $e');
       return [];
+    }
+  }
+
+  Future<void> submitReview({
+    required String productId,
+    required double rating,
+    required String title,
+    required String comment,
+    required bool isRecommended,
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) throw Exception('Must be logged in to submit a review');
+
+    try {
+      await _supabase.from('reviews').insert({
+        'user_id': user.id,
+        'product_id': productId,
+        'rating': rating,
+        'title': title,
+        'comment': comment,
+        'is_recommended': isRecommended,
+        'created_at': DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+      throw Exception('Failed to submit review: $e');
+    }
+  }
+  Future<List<Map<String, dynamic>>> getUserReviews() async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return [];
+
+    try {
+      final data = await _supabase
+          .from('reviews')
+          .select('*, products(name, image_url, price)') // Added price
+          .eq('user_id', user.id)
+          .order('created_at', ascending: false);
+      return List<Map<String, dynamic>>.from(data);
+    } catch (e) {
+      print('Error fetching user reviews: $e');
+      return [];
+    }
+  }
+
+  Future<void> updateReview({
+    required String reviewId,
+    required double rating,
+    required String title,
+    required String comment,
+    required bool isRecommended,
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) throw Exception('Must be logged in to update a review');
+
+    print('DEBUG: Attemption to update review $reviewId by user ${user.id}');
+    print('DEBUG: New Data - Rating: $rating, Title: $title, Comment: $comment');
+
+    try {
+      final response = await _supabase.from('reviews').update({
+        'rating': rating,
+        'title': title,
+        'comment': comment,
+        'is_recommended': isRecommended,
+        // 'updated_at': DateTime.now().toIso8601String(), // Good practice if column exists
+      }).eq('id', reviewId).select();
+      
+      print('DEBUG: Update response: $response');
+      
+      if (response.isEmpty) {
+        print('WARNING: No rows updated! Check RLS or if reviewId matches.');
+        throw Exception('Review update failed: Review not found or permission denied.');
+      }
+    } catch (e) {
+      print('ERROR: Update failed with exception: $e');
+      throw Exception('Failed to update review: $e');
     }
   }
 }
