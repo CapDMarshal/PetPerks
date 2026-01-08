@@ -33,24 +33,28 @@ class CartScreenState extends State<CartScreen> {
           final product = item['products'] as Map<String, dynamic>;
           // Parse price safely
           double price = 0.0;
-          var p = product['price'];
-          if (p is int) {
-            price = p.toDouble();
-          } else if (p is double) {
-            price = p;
-          } else if (p is String) {
-            price = double.tryParse(p) ?? 0.0;
+          if (product != null) {
+            var p = product['price'];
+            if (p is int) {
+              price = p.toDouble();
+            } else if (p is double) {
+              price = p;
+            } else if (p is String) {
+              price = double.tryParse(p) ?? 0.0;
+            }
           }
 
           // Parse old price safely
           double oldPrice = 0.0;
-          var op = product['old_price'];
-          if (op is int) {
-            oldPrice = op.toDouble();
-          } else if (op is double) {
-            oldPrice = op;
-          } else if (op is String) {
-            oldPrice = double.tryParse(op) ?? 0.0;
+          if (product != null) {
+            var op = product['old_price'];
+            if (op is int) {
+              oldPrice = op.toDouble();
+            } else if (op is double) {
+              oldPrice = op;
+            } else if (op is String) {
+              oldPrice = double.tryParse(op) ?? 0.0;
+            }
           }
 
           return {

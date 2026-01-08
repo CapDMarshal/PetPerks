@@ -9,17 +9,14 @@ class DataService {
       final fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
       final path = 'uploads/$fileName';
 
-      await _supabase.storage
-          .from('product-images')
-          .upload(
+      await _supabase.storage.from('product-images').upload(
             path,
             imageFile,
             fileOptions: const FileOptions(cacheControl: '3600', upsert: false),
           );
 
-      final imageUrl = _supabase.storage
-          .from('product-images')
-          .getPublicUrl(path);
+      final imageUrl =
+          _supabase.storage.from('product-images').getPublicUrl(path);
       return imageUrl;
     } catch (e) {
       throw Exception('Failed to upload image: $e');
@@ -30,21 +27,18 @@ class DataService {
     try {
       final user = _supabase.auth.currentUser;
       if (user == null) throw Exception('No user logged in');
-      
-      final fileName = '${user.id}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+
+      final fileName =
+          '${user.id}_${DateTime.now().millisecondsSinceEpoch}.jpg';
       final path = 'avatars/$fileName';
 
-      await _supabase.storage
-          .from('avatars')
-          .upload(
+      await _supabase.storage.from('avatars').upload(
             path,
             imageFile,
             fileOptions: const FileOptions(cacheControl: '3600', upsert: false),
           );
 
-      final imageUrl = _supabase.storage
-          .from('avatars')
-          .getPublicUrl(path);
+      final imageUrl = _supabase.storage.from('avatars').getPublicUrl(path);
       return imageUrl;
     } catch (e) {
       throw Exception('Failed to upload avatar: $e');
@@ -58,11 +52,8 @@ class DataService {
     if (user == null) throw Exception('No user logged in');
 
     try {
-      final data = await _supabase
-          .from('profiles')
-          .select()
-          .eq('id', user.id)
-          .single();
+      final data =
+          await _supabase.from('profiles').select().eq('id', user.id).single();
       return data;
     } catch (e) {
       // If profile doesn't exist, return basic user info
@@ -260,9 +251,10 @@ class DataService {
           .update({'status': status})
           .eq('id', orderId)
           .select();
-      
+
       if (response.isEmpty) {
-        print('Warning: No order rows updated. Possible RLS policy violation or invalid ID.');
+        print(
+            'Warning: No order rows updated. Possible RLS policy violation or invalid ID.');
       }
     } catch (e) {
       throw Exception('Failed to update order status: $e');
@@ -365,14 +357,15 @@ class DataService {
 
   // --- SUBMIT ORDER ---
 
-  Future<void> submitOrder() async {
+  Future<String> submitOrder(
+      {String status = 'indelivery', String? paymentMethod}) async {
     final user = _supabase.auth.currentUser;
     if (user == null) throw Exception('Must be logged in');
 
     try {
       // 1. Fetch Cart Items
       final cartItems = await getCartItems();
-      if (cartItems.isEmpty) return; // Or throw error
+      if (cartItems.isEmpty) throw Exception('Cart is empty');
 
       // 2. Calculate Total
       double totalAmount = 0.0;
@@ -397,13 +390,14 @@ class DataService {
           .insert({
             'user_id': user.id,
             'total_amount': totalAmount,
-            'status': 'indelivery', // Default status
+            'status': status,
+            'payment_type': paymentMethod,
             'created_at': DateTime.now().toIso8601String(),
           })
           .select()
           .single();
 
-      final orderId = orderData['id'];
+      final orderId = orderData['id'].toString();
 
       // 4. Create Order Items
       final orderItemsData = cartItems.map((item) {
@@ -416,8 +410,7 @@ class DataService {
           price = p.toDouble();
         else if (p is double)
           price = p;
-        else if (p is String)
-          price = double.tryParse(p) ?? 0.0;
+        else if (p is String) price = double.tryParse(p) ?? 0.0;
 
         return {
           'order_id': orderId,
@@ -432,6 +425,8 @@ class DataService {
 
       // 5. Clear Cart
       await _supabase.from('cart_items').delete().eq('user_id', user.id);
+
+      return orderId;
     } catch (e) {
       throw Exception('Failed to submit order: $e');
     }

@@ -46,9 +46,8 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
     if (mounted) {
       setState(() {
         // Filter Cards
-        _savedCards = methods
-            .where((m) => m['type_payment'] == 'cards')
-            .toList();
+        _savedCards =
+            methods.where((m) => m['type_payment'] == 'cards').toList();
 
         // Find existing UPI
         try {
@@ -352,6 +351,27 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
                   title: 'Netbanking',
                   expandedContent: const _NetbankingContent(),
                 ),
+                const SizedBox(height: 16.0),
+
+                // 5. Midtrans
+                _ExpandablePaymentOption(
+                  id: '103',
+                  groupValue: _groupValue,
+                  onChanged: (id) {
+                    setState(() {
+                      _groupValue = id!;
+                    });
+                  },
+                  icon: Icons.language,
+                  title: 'Online Payment (Midtrans)',
+                  expandedContent: Padding(
+                    padding: const EdgeInsets.only(bottom: 8.0),
+                    child: Text(
+                      'Pay securely via Midtrans (card, wallet, etc.)',
+                      style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -431,6 +451,15 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
             String title = 'Unknown';
             if (_groupValue == '99') title = 'Cash on Delivery';
             if (_groupValue == '102') title = 'Netbanking';
+            if (_groupValue == '103') {
+              title = 'Midtrans';
+              Navigator.pop(context, {
+                'id': _groupValue,
+                'type_payment': 'midtrans', // Custom type
+                'title': title,
+              });
+              return;
+            }
 
             Navigator.pop(context, {
               'id': _groupValue,
