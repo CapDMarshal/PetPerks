@@ -4,6 +4,7 @@ import 'paymentmethod_screen.dart';
 import 'myorder_screen.dart'; // <-- 1. ADD THIS IMPORT
 
 import '../services/api_service.dart';
+import '../services/midtrans_service.dart';
 
 class CheckoutScreen extends StatefulWidget {
   final Map<String, dynamic>? initialAddress;
@@ -18,6 +19,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   List<Map<String, dynamic>> _items = [];
   bool _isLoading = true;
   final DataService _dataService = DataService();
+  final MidtransService _midtransService = MidtransService();
 
   Map<String, dynamic>? _addressData;
   Map<String, dynamic>? _paymentMethod;
@@ -321,7 +323,16 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             });
 
             try {
-              await _dataService.submitOrder();
+              if (_paymentMethod != null &&
+                  _paymentMethod!['type_payment'] == 'midtrans') {
+                await _midtransService.initiatePayment(
+                  context,
+                  amount: _subtotal,
+                );
+              } else {
+                await _dataService.submitOrder(
+                    paymentMethod: _paymentMethod?['title'] ?? 'Unknown');
+              }
 
               if (mounted) {
                 // Use pushReplacement so user can't go back to checkout
