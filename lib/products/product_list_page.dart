@@ -23,15 +23,17 @@ class _ProductListPageState extends State<ProductListPage> {
 
   // --- 1. TAMBAHAN: State untuk mengelola filter chips ---
   final List<String> _filterCategories = [
-    'Crazy Deals',
-    'Budget Buys',
-    'Best Offer',
-    'Vouchers',
-    'Top Rated',
-    'Newest',
+    'All',
+    'Accessories',
+    'Clothing',
+    'Bedding',
+    'Toys',
+    'Food',
+    'Pet',
+    'Other',
   ];
   // Menyimpan kategori chip yang sedang aktif
-  String _selectedFilterCategory = 'Crazy Deals';
+  String _selectedFilterCategory = 'All';
   // --- Akhir Tambahan ---
 
   final DataService _dataService = DataService();
@@ -45,7 +47,9 @@ class _ProductListPageState extends State<ProductListPage> {
   }
 
   Future<void> _loadProducts() async {
-    final fetchedProducts = await _dataService.getProducts();
+    // Pass 'All' as null or handle in service (service handles 'All' string check, but let's be safe)
+    final fetchedProducts =
+        await _dataService.getProducts(category: _selectedFilterCategory);
     if (mounted) {
       setState(() {
         products = fetchedProducts
@@ -97,9 +101,8 @@ class _ProductListPageState extends State<ProductListPage> {
                         const SizedBox(height: 15),
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                          child: _isListView
-                              ? _buildListView()
-                              : _buildGridView(),
+                          child:
+                              _isListView ? _buildListView() : _buildGridView(),
                         ),
                         const SizedBox(height: 20),
                       ],
@@ -320,7 +323,7 @@ class _ProductListPageState extends State<ProductListPage> {
                   // Update state saat chip ditekan
                   setState(() {
                     _selectedFilterCategory = category;
-                    // TODO: Di sini Anda bisa menambahkan logika
+                    _loadProducts();
                     // untuk memfilter daftar 'products' berdasarkan 'category'
                   });
                 },

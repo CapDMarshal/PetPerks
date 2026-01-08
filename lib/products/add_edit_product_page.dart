@@ -26,9 +26,19 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
     'Bedding',
     'Toys',
     'Food',
+    'Pet',
     'Other',
   ];
   String? _selectedCategory;
+
+  // Pet Categories
+  final List<String> _petCategories = [
+    'Cat',
+    'Dog',
+    'Rabbit',
+    'Parrot',
+  ];
+  String? _selectedPetCategory;
 
   File? _selectedImage;
   String? _currentImageUrl;
@@ -54,6 +64,12 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
         // If category exists but not in list, add it or ignore
         _selectedCategory = null;
         // Optional: _categories.add(cat); _selectedCategory = cat;
+      }
+
+      // Set pet category
+      final petCat = widget.product!['pet_category'];
+      if (_petCategories.contains(petCat)) {
+        _selectedPetCategory = petCat;
       }
     }
   }
@@ -112,6 +128,8 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
         'price': int.tryParse(_priceController.text) ?? 0,
         'old_price': oldPrice, // Can be null
         'category': _selectedCategory,
+        'pet_category':
+            _selectedCategory == 'Pet' ? _selectedPetCategory : null,
         'image_url': imageUrl,
         'description': _descriptionController.text.trim(),
       };
@@ -168,30 +186,30 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
                     child: _selectedImage != null
                         ? Image.file(_selectedImage!, fit: BoxFit.cover)
                         : (_currentImageUrl != null &&
-                              _currentImageUrl!.isNotEmpty)
-                        ? (_currentImageUrl!.startsWith('http')
-                              ? Image.network(
-                                  _currentImageUrl!,
-                                  fit: BoxFit.cover,
-                                )
-                              : Image.asset(
-                                  _currentImageUrl!,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) =>
-                                      const Icon(Icons.broken_image),
-                                ))
-                        : const Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.add_a_photo,
-                                size: 50,
-                                color: Colors.grey,
+                                _currentImageUrl!.isNotEmpty)
+                            ? (_currentImageUrl!.startsWith('http')
+                                ? Image.network(
+                                    _currentImageUrl!,
+                                    fit: BoxFit.cover,
+                                  )
+                                : Image.asset(
+                                    _currentImageUrl!,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) =>
+                                        const Icon(Icons.broken_image),
+                                  ))
+                            : const Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.add_a_photo,
+                                    size: 50,
+                                    color: Colors.grey,
+                                  ),
+                                  SizedBox(height: 8),
+                                  Text('Tap to select image'),
+                                ],
                               ),
-                              SizedBox(height: 8),
-                              Text('Tap to select image'),
-                            ],
-                          ),
                   ),
                 ),
               ),
@@ -256,6 +274,33 @@ class _AddEditProductPageState extends State<AddEditProductPage> {
                 validator: (val) =>
                     val == null ? 'Please select a category' : null,
               ),
+              if (_selectedCategory == 'Pet') ...[
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  value: _selectedPetCategory,
+                  decoration: const InputDecoration(
+                    labelText: 'Pet Category',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: _petCategories.map((String category) {
+                    return DropdownMenuItem<String>(
+                      value: category,
+                      child: Text(category),
+                    );
+                  }).toList(),
+                  onChanged: (String? newValue) {
+                    setState(() {
+                      _selectedPetCategory = newValue;
+                    });
+                  },
+                  validator: (val) {
+                    if (_selectedCategory == 'Pet' && val == null) {
+                      return 'Please select a pet category';
+                    }
+                    return null;
+                  },
+                ),
+              ],
               const SizedBox(height: 16),
               TextFormField(
                 controller: _descriptionController,
