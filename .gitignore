@@ -43,3 +43,7 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Supabase credentials (IMPORTANT - DO NOT COMMIT)
+lib/supabase_config.dart
+
