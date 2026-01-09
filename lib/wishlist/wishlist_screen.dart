@@ -128,8 +128,22 @@ class _WishlistScreenState extends State<WishlistScreen> {
   }
   
   // Fungsi ini sekarang tidak lagi berisi navigasi, navigasi diurus di ProductCard
-  void _addToCart(String productId) {
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Item ditambahkan ke Keranjang!')));
+  Future<void> _addToCart(String productId) async {
+    // Show visual feedback or loading if needed, though SnackBar is often enough for "Add" actions
+    try {
+      await _dataService.addToCart(productId, quantity: 1);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Item added to Cart successfully!')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to add to cart: $e')),
+        );
+      }
+    }
   }
 
   double _calculateTotal() {
@@ -365,7 +379,19 @@ class ProductCard extends StatelessWidget {
                 Center(child: Container(
                   padding: const EdgeInsets.all(16), 
                   width: double.infinity, 
-                  child: Image.asset(product.imageUrl, fit: BoxFit.contain), 
+                  child: (product.imageUrl.startsWith('http') || product.imageUrl.startsWith('https'))
+                      ? Image.network(
+                          product.imageUrl,
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const Icon(Icons.image_not_supported, size: 50, color: Colors.grey),
+                        )
+                      : Image.asset(
+                          product.imageUrl,
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const Icon(Icons.image_not_supported, size: 50, color: Colors.grey),
+                        ), 
                 )),
                 Positioned(top: 0, right: 0, child: IconButton(icon: const Icon(Icons.close, color: Colors.grey), onPressed: onRemove)),
               ],
@@ -395,8 +421,8 @@ class ProductCard extends StatelessWidget {
                   decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(4)), 
                   child: const Icon(Icons.shopping_cart_outlined, color: Colors.white, size: 20)
                 ),
-                // PERUBAHAN 1: Navigasi ke CartScreen dari Product Card
-                onPressed: () => _navigateToCartScreen(context), 
+                // PERUBAHAN 1: Navigasi ke CartScreen dari Product Card (Fixed: Now actually adds to cart)
+                onPressed: onAddToCart, 
               ),
             ),
             const SizedBox(height: 4),

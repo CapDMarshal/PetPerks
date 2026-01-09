@@ -12,6 +12,7 @@ import '../category/category_screen.dart';
 
 import '../services/api_service.dart';
 import '../auth/login_page.dart';
+import '../widgets/wishlist_icon_button.dart';
 
 void main() {
   runApp(const PetPerksApp());
@@ -838,17 +839,17 @@ class _HomePageContentState extends State<HomePageContent> {
                   top: 8,
                   right: 8,
                   child: Container(
+                    width: 32, // Ensure consistent size
+                    height: 32,
                     decoration: const BoxDecoration(
                       color: Colors.white,
                       shape: BoxShape.circle,
                     ),
-                    child: const Padding(
-                      padding: EdgeInsets.all(4.0),
-                      child: Icon(
-                        Icons.favorite_border,
-                        size: 20,
-                        color: Colors.grey,
-                      ),
+                    child: WishlistIconButton(
+                      productId: product['id']?.toString() ?? '',
+                      size: 18,
+                      activeColor: Colors.red,
+                      inactiveColor: Colors.grey,
                     ),
                   ),
                 ),
@@ -1241,6 +1242,7 @@ class _HomePageContentState extends State<HomePageContent> {
                 "\$95",
                 "assets/belt_product.jpg",
                 Colors.blue.shade50,
+                "dummy_belt_1", // Added explicit ID
               ),
               _buildWishlistCard(
                 "Dog Cloths",
@@ -1248,6 +1250,7 @@ class _HomePageContentState extends State<HomePageContent> {
                 "\$95",
                 "assets/cloths_product.jpg",
                 Colors.green.shade50,
+                "dummy_cloths_1", // Added explicit ID
               ),
               _buildWishlistCard(
                 "Pet Bed",
@@ -1255,6 +1258,7 @@ class _HomePageContentState extends State<HomePageContent> {
                 "\$95",
                 "assets/bed_product.jpg",
                 Colors.orange.shade50,
+                "dummy_bed_1", // Added explicit ID
               ),
             ],
           ),
@@ -1270,6 +1274,7 @@ class _HomePageContentState extends State<HomePageContent> {
     String oldPrice,
     String imagePath,
     Color backgroundColor,
+    String productId,
   ) {
     return Container(
       width: 180,
@@ -1324,13 +1329,11 @@ class _HomePageContentState extends State<HomePageContent> {
                       ),
                     ],
                   ),
-                  child: IconButton(
-                    icon: const Icon(Icons.favorite_border),
-                    color: Colors.red.shade300,
-                    iconSize: 20,
-                    padding: const EdgeInsets.all(8),
-                    constraints: const BoxConstraints(),
-                    onPressed: () {},
+                  child: WishlistIconButton(
+                    productId: productId,
+                    size: 20,
+                    activeColor: Colors.red.shade300,
+                    inactiveColor: Colors.grey,
                   ),
                 ),
               ),
@@ -1523,6 +1526,22 @@ class _HomePageContentState extends State<HomePageContent> {
                       ),
               ),
             ),
+            
+            // Heart Icon for Featured Card (positioned absolute inside the card usually, but here layout is Row)
+            // The design in _buildFeaturedNowCard is Row[Image, Details]. 
+            // There is NO heart icon in the previous code for _buildFeaturedNowCard!
+            // Wait, looking at the code... 
+            // Lines 1478-1600: It returns a Container -> InkWell -> Row. There is NO heart icon in this widget currently.
+            // If the user wants it here too, I should add it.
+            // But checking the screenshot provided by user (if any) or request context: 
+            // "produk yang sudah di love tidak ikut merah lovenya di home" usually refers to the main grid.
+            // I will SKIP adding it to FeaturedNowCard for now unless it was already there, 
+            // because fitting it into the existing Row layout might break the design.
+            // checking previous code... yeah, no heart icon in _buildFeaturedNowCard.
+            // So I only focus on Detail/Price/etc.
+ 
+            // Wait, I see "Image" then "Details" Expanded.
+            // I will leave this one alone to avoid UI regression, focusing on the grid items where the icon exists.
             // Details
             Expanded(
               child: Padding(
