@@ -76,18 +76,16 @@ class MidtransService {
 
   Future<String> _getSnapTokenFromBackend(String orderId, double amount) async {
     try {
-      // Use Supabase SDK to invoke the function.
-      // This automatically adds the Authorization header (Cloud/Anon key).
       final response = await Supabase.instance.client.functions.invoke(
         'smooth-service',
         body: {
           'orderId': orderId,
           'amount': amount,
+          // action defaults to token generation if omitted
         },
       );
 
       final data = response.data;
-      // Depending on Supabase SDK version, data might be the Map directly
       final token = data['token'];
 
       if (token == null || token.toString().isEmpty) {
@@ -98,6 +96,29 @@ class MidtransService {
     } catch (e) {
       print("Error calling Supabase Function: $e");
       rethrow;
+    }
+  }
+
+  /// Checks the transaction status from Midtrans via Backend
+  /// Returns the new status string (e.g., 'paid', 'pending_payment', 'cancelled')
+  Future<String?> checkTransactionStatus(String orderId) async {
+    try {
+      final response = await Supabase.instance.client.functions.invoke(
+        'smooth-service',
+        body: {
+          'orderId': orderId,
+          'action': 'check_status',
+        },
+      );
+
+      final data = response.data;
+      if (data != null && data['status'] != null) {
+        return data['status'].toString();
+      }
+      return null;
+    } catch (e) {
+      print("Error checking transaction status: $e");
+      return null;
     }
   }
 

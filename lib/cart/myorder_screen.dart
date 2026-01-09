@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:petperks/profile/components/track-order.dart';
 import 'package:petperks/profile/components/reviews.dart';
 import '../services/api_service.dart';
+import '../services/midtrans_service.dart';
 
 class MyOrderScreen extends StatefulWidget {
   const MyOrderScreen({super.key});
@@ -32,15 +33,42 @@ class _MyOrderScreenState extends State<MyOrderScreen> {
     super.dispose();
   }
 
+  final MidtransService _midtransService = MidtransService();
+
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     try {
       final orders = await _dataService.getOrders();
       final reviews = await _dataService.getUserReviews();
-      
-      final reviewedIds = reviews
-          .map((r) => r['product_id'] as String)
-          .toSet();
+
+      final reviewedIds = reviews.map((r) => r['product_id'] as String).toSet();
+
+      // --- NEW: Check status for pending orders ---
+      for (var i = 0; i < orders.length; i++) {
+        final order = orders[i];
+        // Check if pending_payment and potentially Midtrans (or payment_type is null/Midtrans)
+        // Adjust logic if you only want to check Midtrans specifically
+        if (order['status'] == 'pending_payment') {
+          // We can try to check status anyway
+          final orderId = order['id'].toString();
+          // Only check if it's been created recently? Or always?
+          // Let's check always for now.
+          try {
+            final newStatus =
+                await _midtransService.checkTransactionStatus(orderId);
+            if (newStatus != null && newStatus != order['status']) {
+              print(
+                  'DEBUG: Order $orderId status updated from ${order['status']} to $newStatus');
+              orders[i]['status'] = newStatus;
+              // Status changed, maybe we should also reload from DB to be sure?
+              // For now, updating local list is enough for UI.
+            }
+          } catch (e) {
+            print('Error checking status for order $orderId: $e');
+          }
+        }
+      }
+      // ---------------------------------------------
 
       if (mounted) {
         setState(() {
@@ -70,24 +98,26 @@ class _MyOrderScreenState extends State<MyOrderScreen> {
           final nowUtc = DateTime.now().toUtc();
           final minutesDiff = nowUtc.difference(createdAt).inMinutes;
 
-          print('DEBUG: Order ${order['id']} diff: $minutesDiff mins. Created: $createdAt, Now: $nowUtc');
+          print(
+              'DEBUG: Order ${order['id']} diff: $minutesDiff mins. Created: $createdAt, Now: $nowUtc');
 
-          // Change to 5 minutes as implied by user ("more than 5 minutes") 
+          // Change to 5 minutes as implied by user ("more than 5 minutes")
           // or keep 1 if that was intended. User complaint implies they expect it to happen by 5 mins.
-          // Let's set it to 5 to match the user's mention, or stick to logic. 
-          // If the code had 1, it should have happened ALREADY. 
-          // I will stick to the existing logic '1' for now but fix the comparison. 
-          // Actually, let's bump to 5 if that's what a "production" app would do, 
-          // but the user asked "why it didn't update", confusing. 
+          // Let's set it to 5 to match the user's mention, or stick to logic.
+          // If the code had 1, it should have happened ALREADY.
+          // I will stick to the existing logic '1' for now but fix the comparison.
+          // Actually, let's bump to 5 if that's what a "production" app would do,
+          // but the user asked "why it didn't update", confusing.
           // Let's keep 1 for faster testing, but ensure logging.
-          
-          if (minutesDiff >= 1) { 
+
+          if (minutesDiff >= 1) {
             // Auto-complete order
             try {
               print('DEBUG: Attempting to auto-complete order ${order['id']}');
               await _dataService.updateOrderStatus(order['id'], 'delivered');
               needsReload = true;
-              print('SUCCESS: Order ${order['id']} auto-completed to delivered');
+              print(
+                  'SUCCESS: Order ${order['id']} auto-completed to delivered');
             } catch (e) {
               print('ERROR: Failed to auto-complete order: $e');
             }
@@ -111,18 +141,23 @@ class _MyOrderScreenState extends State<MyOrderScreen> {
       // Filter based on status
       bool match = false;
       if (_isOngoingSelected) {
-        if (status == 'indelivery') match = true;
+        if (status == 'indelivery' ||
+            status == 'paid' ||
+            status == 'pending_payment') match = true;
       } else {
-        if (status == 'delivered' || status == 'canceled') match = true;
+        if (status == 'delivered' ||
+            status == 'canceled' ||
+            status == 'cancelled') match = true;
       }
 
       if (match) {
-          final items = order['order_items'] as List<dynamic>? ?? [];
+        final items = order['order_items'] as List<dynamic>? ?? [];
         for (var item in items) {
           final product = item['products'] as Map<String, dynamic>?;
           print('DEBUG: Product data: $product'); // Debugging image issue
           final productId = product?['id'] as String?;
-          final isReviewed = productId != null && _reviewedProductIds.contains(productId);
+          final isReviewed =
+              productId != null && _reviewedProductIds.contains(productId);
 
           displayItems.add({
             'title': product?['name'] ?? 'Unknown Product',
@@ -139,7 +174,6 @@ class _MyOrderScreenState extends State<MyOrderScreen> {
     // Sort: 'indelivery' first, then by date descending (implicit from DB usually)
     // But since we flatten, we might want to ensure ongoing is at top if mixed?
     // Actually the tabs separate them.
-
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -211,7 +245,8 @@ class _MyOrderScreenState extends State<MyOrderScreen> {
                               status: item['status'],
                               product: item['product'],
                               isReviewed: item['isReviewed'] ?? false,
-                              onReviewSubmitted: _loadData, // Pass reload callback
+                              onReviewSubmitted:
+                                  _loadData, // Pass reload callback
                             );
                           },
                         ),
@@ -396,7 +431,6 @@ class _OrderItemCard extends StatelessWidget {
                       )
                     else
                       Container(),
-                    
                     ElevatedButton(
                       onPressed: () {
                         if (isOngoing) {
@@ -408,33 +442,41 @@ class _OrderItemCard extends StatelessWidget {
                         } else {
                           // If reviewed, maybe just show a snackbar or navigate to edit?
                           if (isReviewed) {
-                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('You have already reviewed this product. Check "Reviews" in Profile to edit.')),
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content: Text(
+                                      'You have already reviewed this product. Check "Reviews" in Profile to edit.')),
                             );
                             return;
                           }
 
                           // Ensure we have valid product data
                           if (product != null && product!['id'] != null) {
-                             Navigator.of(context).push(
+                            Navigator.of(context)
+                                .push(
                               MaterialPageRoute(
-                                builder: (context) => WriteReviewPage(product: product!),
+                                builder: (context) =>
+                                    WriteReviewPage(product: product!),
                               ),
-                            ).then((value) {
+                            )
+                                .then((value) {
                               // Reload if value is true (submitted)
-                              if (value == true || true) { // Reload anyway to be safe
+                              if (value == true || true) {
+                                // Reload anyway to be safe
                                 onReviewSubmitted?.call();
                               }
                             });
                           } else {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Cannot review this product')),
+                              const SnackBar(
+                                  content: Text('Cannot review this product')),
                             );
                           }
                         }
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: isReviewed ? Colors.green : Colors.black,
+                        backgroundColor:
+                            isReviewed ? Colors.green : Colors.black,
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8.0),
@@ -449,11 +491,9 @@ class _OrderItemCard extends StatelessWidget {
                         ),
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
-                      child: Text(
-                        isOngoing 
-                          ? 'Track Order' 
-                          : (isReviewed ? 'Reviewed' : 'Write Review')
-                      ),
+                      child: Text(isOngoing
+                          ? 'Track Order'
+                          : (isReviewed ? 'Reviewed' : 'Write Review')),
                     ),
                   ],
                 ),
