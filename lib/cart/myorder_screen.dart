@@ -23,7 +23,7 @@ class _MyOrderScreenState extends State<MyOrderScreen> {
   @override
   void initState() {
     super.initState();
-    _loadData(); // Changed name to reflect multiple data sources
+    _loadData();
     _startAutoCompletionCheck();
   }
 
@@ -46,13 +46,8 @@ class _MyOrderScreenState extends State<MyOrderScreen> {
       // --- NEW: Check status for pending orders ---
       for (var i = 0; i < orders.length; i++) {
         final order = orders[i];
-        // Check if pending_payment and potentially Midtrans (or payment_type is null/Midtrans)
-        // Adjust logic if you only want to check Midtrans specifically
         if (order['status'] == 'pending_payment') {
-          // We can try to check status anyway
           final orderId = order['id'].toString();
-          // Only check if it's been created recently? Or always?
-          // Let's check always for now.
           try {
             final newStatus =
                 await _midtransService.checkTransactionStatus(orderId);
@@ -60,8 +55,6 @@ class _MyOrderScreenState extends State<MyOrderScreen> {
               print(
                   'DEBUG: Order $orderId status updated from ${order['status']} to $newStatus');
               orders[i]['status'] = newStatus;
-              // Status changed, maybe we should also reload from DB to be sure?
-              // For now, updating local list is enough for UI.
             }
           } catch (e) {
             print('Error checking status for order $orderId: $e');
@@ -93,22 +86,12 @@ class _MyOrderScreenState extends State<MyOrderScreen> {
         final String? createdAtStr = order['created_at'];
 
         if (status == 'indelivery' && createdAtStr != null) {
-          // Robust checking: Convert both to UTC
           final createdAt = DateTime.parse(createdAtStr).toUtc();
           final nowUtc = DateTime.now().toUtc();
           final minutesDiff = nowUtc.difference(createdAt).inMinutes;
 
           print(
               'DEBUG: Order ${order['id']} diff: $minutesDiff mins. Created: $createdAt, Now: $nowUtc');
-
-          // Change to 5 minutes as implied by user ("more than 5 minutes")
-          // or keep 1 if that was intended. User complaint implies they expect it to happen by 5 mins.
-          // Let's set it to 5 to match the user's mention, or stick to logic.
-          // If the code had 1, it should have happened ALREADY.
-          // I will stick to the existing logic '1' for now but fix the comparison.
-          // Actually, let's bump to 5 if that's what a "production" app would do,
-          // but the user asked "why it didn't update", confusing.
-          // Let's keep 1 for faster testing, but ensure logging.
 
           if (minutesDiff >= 1) {
             // Auto-complete order
@@ -160,6 +143,7 @@ class _MyOrderScreenState extends State<MyOrderScreen> {
               productId != null && _reviewedProductIds.contains(productId);
 
           displayItems.add({
+            'orderId': order['id'].toString(), // Add orderId
             'title': product?['name'] ?? 'Unknown Product',
             'price': item['price_at_purchase'].toString(),
             'quantity': item['quantity'],
@@ -170,10 +154,6 @@ class _MyOrderScreenState extends State<MyOrderScreen> {
         }
       }
     }
-
-    // Sort: 'indelivery' first, then by date descending (implicit from DB usually)
-    // But since we flatten, we might want to ensure ongoing is at top if mixed?
-    // Actually the tabs separate them.
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -235,6 +215,7 @@ class _MyOrderScreenState extends State<MyOrderScreen> {
                             final item = displayItems[index];
 
                             return _OrderItemCard(
+                              orderId: item['orderId'], // Pass orderId
                               title: item['title'],
                               icon: Icons.shopping_bag,
                               imageColor: const Color(0xFFD4E5E2),
@@ -257,7 +238,7 @@ class _MyOrderScreenState extends State<MyOrderScreen> {
   }
 }
 
-// --- _ToggleButton (Unchanged) ---
+// --- _ToggleButton ---
 class _ToggleButton extends StatelessWidget {
   final String text;
   final bool isSelected;
@@ -309,8 +290,9 @@ class _ToggleButton extends StatelessWidget {
   }
 }
 
-// --- _OrderItemCard (Updated) ---
+// --- _OrderItemCard ---
 class _OrderItemCard extends StatelessWidget {
+  final String orderId;
   final String title;
   final IconData icon;
   final Color imageColor;
@@ -321,9 +303,10 @@ class _OrderItemCard extends StatelessWidget {
   final String status;
   final Map<String, dynamic>? product;
   final bool isReviewed;
-  final VoidCallback? onReviewSubmitted; // Add callback
+  final VoidCallback? onReviewSubmitted;
 
   const _OrderItemCard({
+    required this.orderId,
     required this.title,
     required this.icon,
     required this.imageColor,
@@ -334,7 +317,7 @@ class _OrderItemCard extends StatelessWidget {
     required this.status,
     this.product,
     this.isReviewed = false,
-    this.onReviewSubmitted, // Add to constructor
+    this.onReviewSubmitted,
   });
 
   @override
@@ -436,7 +419,10 @@ class _OrderItemCard extends StatelessWidget {
                         if (isOngoing) {
                           Navigator.of(context).push(
                             MaterialPageRoute(
-                              builder: (context) => const TrackOrderPage(),
+                              builder: (context) => TrackOrderPage(
+                                orderId: orderId,
+                                product: product,
+                              ),
                             ),
                           );
                         } else {

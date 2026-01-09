@@ -448,6 +448,45 @@ class DataService {
       // 5. Clear Cart
       await _supabase.from('cart_items').delete().eq('user_id', user.id);
 
+      // 6. Initialize Tracking Status
+      // Add default tracking steps
+      final trackingEvents = [
+        {
+          'order_id': orderId,
+          'title': 'Order Placed',
+          'description': 'We have received your order',
+          'event_date': DateTime.now().toIso8601String(),
+          'is_completed': true,
+          'display_order': 1,
+        },
+        {
+          'order_id': orderId,
+          'title': 'Order Confirmed',
+          'description': 'Your order has been confirmed',
+          'event_date': null, // pending
+          'is_completed': false,
+          'display_order': 2,
+        },
+        {
+          'order_id': orderId,
+          'title': 'Ready To Ship',
+          'description': 'We are preparing your order',
+          'event_date': null,
+          'is_completed': false,
+          'display_order': 3,
+        },
+        {
+          'order_id': orderId,
+          'title': 'Out For Delivery',
+          'description': 'Your order is out for delivery',
+          'event_date': null,
+          'is_completed': false,
+          'display_order': 4,
+        },
+      ];
+
+      await _supabase.from('order_tracking').insert(trackingEvents);
+
       return orderId;
     } catch (e) {
       throw Exception('Failed to submit order: $e');
@@ -644,6 +683,25 @@ class DataService {
       return List<Map<String, dynamic>>.from(data);
     } catch (e) {
       print('Error fetching notifications: $e');
+      return [];
+    }
+  }
+
+  // --- TRACKING ---
+
+  Future<List<Map<String, dynamic>>> getOrderTracking(String orderId) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return [];
+
+    try {
+      final data = await _supabase
+          .from('order_tracking')
+          .select()
+          .eq('order_id', orderId)
+          .order('display_order', ascending: true);
+      return List<Map<String, dynamic>>.from(data);
+    } catch (e) {
+      print('Error fetching order tracking: $e');
       return [];
     }
   }
