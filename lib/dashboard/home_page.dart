@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart' hide CarouselController;
+import 'package:flutter/material.dart';
+import '../products/product_detail_page.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../products/product_list_page.dart';
@@ -8,7 +9,7 @@ import '../wishlist/wishlist_screen.dart';
 import '../cart/cart_screen.dart';
 import '../profile/profile_screen.dart';
 import '../category/category_screen.dart';
-import '../widgets/wishlist_icon_button.dart';
+
 import '../services/api_service.dart';
 import '../auth/login_page.dart';
 
@@ -59,10 +60,15 @@ class _HomePageContentState extends State<HomePageContent> {
   String _email = 'guest@example.com'; // Default email
   String? _avatarUrl;
 
+  // Cart State
+  List<Map<String, dynamic>> _cartItems = [];
+  bool _isLoadingCart = true;
+
   @override
   void initState() {
     super.initState();
     _setupAuthListener();
+    _fetchCartItems(); // Fetch cart items on init
     // Simulate loading time (preloader)
     Future.delayed(const Duration(seconds: 2), () {
       if (mounted) {
@@ -73,22 +79,45 @@ class _HomePageContentState extends State<HomePageContent> {
     });
   }
 
+  Future<void> _fetchCartItems() async {
+    print("DEBUG: _fetchCartItems called (in HomePage)");
+    try {
+      final items = await _dataService.getCartItems();
+      print("DEBUG: _fetchCartItems items received: $items");
+      if (mounted) {
+        setState(() {
+          _cartItems = items;
+          _isLoadingCart = false;
+        });
+      }
+    } catch (e) {
+      print("DEBUG: Error fetching cart items in HomePage: $e");
+      if (mounted) {
+        setState(() {
+          _cartItems = [];
+          _isLoadingCart = false;
+        });
+      }
+    }
+  }
+
   final DataService _dataService = DataService();
 
   void _setupAuthListener() {
     // Listen to auth state changes
     Supabase.instance.client.auth.onAuthStateChange.listen((data) async {
       final Session? session = data.session;
-      final User? user = session?.user ?? Supabase.instance.client.auth.currentUser;
+      final User? user =
+          session?.user ?? Supabase.instance.client.auth.currentUser;
 
       if (mounted) {
         if (user != null) {
           // Try to get from metadata first for immediate feedback
-          String name = user.userMetadata?['display_name'] ?? 
-                       user.userMetadata?['full_name'] ?? 
-                       user.userMetadata?['name'] ?? 
-                       'Guest';
-          
+          String name = user.userMetadata?['display_name'] ??
+              user.userMetadata?['full_name'] ??
+              user.userMetadata?['name'] ??
+              'Guest';
+
           setState(() {
             _displayName = name;
             _email = user.email ?? 'guest@example.com';
@@ -97,16 +126,15 @@ class _HomePageContentState extends State<HomePageContent> {
           // Fetch full profile from DB to be accurate
           try {
             final profile = await _dataService.getProfile();
-             if (mounted) {
+            if (mounted) {
               setState(() {
                 _displayName = profile['display_name'] ?? name;
-                _avatarUrl = profile['avatar_url']; 
+                _avatarUrl = profile['avatar_url'];
               });
             }
           } catch (e) {
             print('Error fetching profile on home: $e');
           }
-
         } else {
           setState(() {
             _displayName = 'Guest';
@@ -164,7 +192,8 @@ class _HomePageContentState extends State<HomePageContent> {
                           _avatarUrl!,
                           fit: BoxFit.cover,
                           errorBuilder: (context, error, stackTrace) =>
-                              const Icon(Icons.person, size: 24, color: Colors.grey),
+                              const Icon(Icons.person,
+                                  size: 24, color: Colors.grey),
                         )
                       : const Icon(Icons.person, size: 24, color: Colors.grey),
                 ),
@@ -199,23 +228,6 @@ class _HomePageContentState extends State<HomePageContent> {
                   MaterialPageRoute(builder: (_) => const NotificationScreen()),
                 );
               },
-            ),
-            Positioned(
-              top: 8,
-              right: 8,
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                decoration: const BoxDecoration(
-                  color: Colors.red,
-                  shape: BoxShape.circle,
-                ),
-                constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-                child: const Text(
-                  '14',
-                  style: TextStyle(color: Colors.white, fontSize: 10),
-                  textAlign: TextAlign.center,
-                ),
-              ),
             ),
           ],
         ),
@@ -368,13 +380,13 @@ class _HomePageContentState extends State<HomePageContent> {
                             onPressed: () async {
                               // Capture the navigator from the PARENT context (the page), not the dialog
                               final navigator = Navigator.of(context);
-                              
+
                               Navigator.pop(dialogContext); // Close dialog
-                              
+
                               try {
                                 // Sign out from Supabase
                                 await Supabase.instance.client.auth.signOut();
-                                
+
                                 // Navigate immediately using the captured navigator
                                 navigator.pushAndRemoveUntil(
                                   MaterialPageRoute(
@@ -386,7 +398,8 @@ class _HomePageContentState extends State<HomePageContent> {
                                 print('Error logging out: $e');
                                 if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Error logging out: $e')),
+                                    SnackBar(
+                                        content: Text('Error logging out: $e')),
                                   );
                                 }
                               }
@@ -472,21 +485,15 @@ class _HomePageContentState extends State<HomePageContent> {
         children: [
           _buildBanner(),
           _buildCategorySection(),
-          _buildPetServicesSection(),
           _buildProductSection(
             "Reliable Healthy Food For Your Pet",
-            "Dogs Food",
           ),
-          _buildTestimonialSection(),
           _buildPeopleAlsoViewedSection(),
           _buildCartSection(),
-          _buildPopularNearbySection(),
-          _buildBlockbusterDealsSection(),
           _buildWishlistSection(),
           _buildFeaturedNowSection(),
           _buildFeaturedOfferSection(),
           _buildGreatSavingSection(),
-          _buildSponsoredSection(),
         ],
       ),
     );
@@ -654,9 +661,19 @@ class _HomePageContentState extends State<HomePageContent> {
   Widget _buildCategoryGridItem(String name, String imagePath) {
     return InkWell(
       onTap: () {
+        // Map display name to DB value (simple singularization)
+        String categoryParam = name;
+        if (name == 'Dogs')
+          categoryParam = 'Dog';
+        else if (name == 'Cats')
+          categoryParam = 'Cat';
+        else if (name == 'Rabbits') categoryParam = 'Rabbit';
+
         Navigator.of(
           context,
-        ).push(MaterialPageRoute(builder: (_) => const CategoryScreen()));
+        ).push(MaterialPageRoute(
+            builder: (_) =>
+                ProductListPage(initialPetCategory: categoryParam)));
       },
       child: Card(
         elevation: 0,
@@ -688,125 +705,10 @@ class _HomePageContentState extends State<HomePageContent> {
     );
   }
 
-  /// Widget untuk Layanan (Category Style 2)
-  Widget _buildPetServicesSection() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16),
-      child: Column(
-        children: [
-          _buildTitleBar(
-            "Our pet care services",
-            "See All",
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const ProductListPage()),
-              );
-            },
-          ),
-          // Horizontal Tags
-          SizedBox(
-            height: 40,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              children: [
-                _buildTagChip("Pet Grooming", isActive: true),
-                _buildTagChip("Walking and sitting"),
-                _buildTagChip("Dog Training"),
-                _buildTagChip("Dog Boarding Kennels"),
-              ],
-            ),
-          ),
-          // About Area
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // ... (Icon dan Teks 'Pet Grooming') ...
-                const SizedBox(height: 10),
-                const Text(
-                  "Lorem Ipsum is simply dummy text of the printing and typesetting industry. ...",
-                  style: TextStyle(fontSize: 14, color: Colors.black54),
-                ),
-                const SizedBox(height: 20),
-                // Offer Banner
-                Row(
-                  children: [
-                    Expanded(
-                      child: InkWell(
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const ProductListPage(),
-                            ),
-                          );
-                        },
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: Image.asset(
-                            "assets/dog_grooming.jpg",
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) =>
-                                Container(
-                                  height: 100,
-                                  color: Colors.grey.shade200,
-                                ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: InkWell(
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const ProductListPage(),
-                            ),
-                          );
-                        },
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: Image.asset(
-                            "assets/cat_grooming.jpeg",
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) =>
-                                Container(
-                                  height: 100,
-                                  color: Colors.grey.shade200,
-                                ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   // Helper untuk Tag Chip
-  Widget _buildTagChip(String label, {bool isActive = false}) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 8.0),
-      child: ActionChip(
-        label: Text(label),
-        backgroundColor: isActive
-            ? Theme.of(context).primaryColor
-            : Colors.grey.shade200,
-        labelStyle: TextStyle(color: isActive ? Colors.white : Colors.black),
-        onPressed: () {},
-      ),
-    );
-  }
 
   /// Widget untuk Produk (Nearby)
-  Widget _buildProductSection(String title, String activeTag) {
+  Widget _buildProductSection(String title) {
     return Column(
       children: [
         _buildTitleBar(
@@ -815,68 +717,67 @@ class _HomePageContentState extends State<HomePageContent> {
           onTap: () {
             Navigator.of(
               context,
-            ).push(MaterialPageRoute(builder: (_) => const ProductListPage()));
+            ).push(
+              MaterialPageRoute(
+                builder: (_) =>
+                    const ProductListPage(initialFilterCategory: 'Food'),
+              ),
+            );
           },
         ),
-        SizedBox(
-          height: 40,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            children: [
-              _buildTagChip(activeTag, isActive: true),
-              _buildTagChip("Cats Food"),
-              _buildTagChip("Rabbits Food"),
-            ],
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisSpacing: 10,
-            mainAxisSpacing: 10,
-            childAspectRatio: 0.75, // Sesuaikan rasio agar pas
-            children: [
-              _buildProductCard(
-                "Dog Body Belt",
-                "\$80",
-                "\$95",
-                "assets/belt_product.jpg",
-              ),
-              _buildProductCard(
-                "Dog Cloths",
-                "\$80",
-                "\$95",
-                "assets/cloths_product.jpg",
-              ),
-              _buildProductCard(
-                "Pet Bed For Dog",
-                "\$80",
-                "\$95",
-                "assets/bed_product.jpg",
-              ),
-              _buildProductCard(
-                "Dog Chew Toys",
-                "\$80",
-                "\$95",
-                "assets/chew_toys_product.jpg",
-              ),
-            ],
-          ),
-        ),
+        FutureBuilder<List<Map<String, dynamic>>>(
+            future: DataService().getProducts(category: 'Food'),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError) {
+                return const Center(child: Text("Error loading food"));
+              }
+              final products = snapshot.data ?? [];
+              if (products.isEmpty) {
+                return const Center(child: Text("No food items found"));
+              }
+
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: GridView.count(
+                  crossAxisCount: 2,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 10,
+                  childAspectRatio: 0.75, // Sesuaikan rasio agar pas
+                  children: products.take(4).map((item) {
+                    return _buildProductCard(item);
+                  }).toList(),
+                ),
+              );
+            }),
       ],
     );
   }
 
-  Widget _buildProductCard(
-    String title,
-    String price,
-    String oldPrice,
-    String imagePath,
-  ) {
+  Widget _buildProductCard(Map<String, dynamic> product) {
+    // Normalisasi data untuk display dan pass ke detail page
+    final String title = product['name'] ?? 'Unknown';
+    final String price = "\$${product['price']}";
+    final String oldPrice =
+        product['old_price'] != null ? "\$${product['old_price']}" : "";
+    final String imagePath = product['image_url'] ?? "";
+
+    // Map untuk ProductDetailPage (sesuaikan dengan ekspektasi page tersebut)
+    final Map<String, dynamic> productForDetail = {
+      'id': product['id'],
+      'name': title,
+      'price': product['price'], // Kirim raw number/string
+      'oldPrice': product['old_price'],
+      'imagePath': imagePath, // Standardize key to imagePath
+      'category': product['category'],
+      'description': product['description'],
+      'review': product['reviews_count'],
+    };
+
     return Card(
       elevation: 1,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -884,7 +785,11 @@ class _HomePageContentState extends State<HomePageContent> {
         onTap: () {
           Navigator.of(
             context,
-          ).push(MaterialPageRoute(builder: (_) => const ProductListPage()));
+          ).push(
+            MaterialPageRoute(
+              builder: (_) => ProductDetailPage(product: productForDetail),
+            ),
+          );
         },
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -895,21 +800,39 @@ class _HomePageContentState extends State<HomePageContent> {
                   borderRadius: const BorderRadius.vertical(
                     top: Radius.circular(12),
                   ),
-                  child: Image.asset(
-                    imagePath,
-                    height: 150, // Tentukan tinggi gambar
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      height: 150,
-                      color: Colors.grey.shade200,
-                      child: const Icon(
-                        Icons.pets,
-                        size: 50,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ),
+                  child: imagePath.startsWith('http')
+                      ? Image.network(
+                          imagePath,
+                          height: 150,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              Container(
+                            height: 150,
+                            color: Colors.grey.shade200,
+                            child: const Icon(
+                              Icons.pets,
+                              size: 50,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        )
+                      : Image.asset(
+                          imagePath,
+                          height: 150,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              Container(
+                            height: 150,
+                            color: Colors.grey.shade200,
+                            child: const Icon(
+                              Icons.pets,
+                              size: 50,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ),
                 ),
                 Positioned(
                   top: 8,
@@ -957,14 +880,15 @@ class _HomePageContentState extends State<HomePageContent> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Text(
-                        oldPrice,
-                        style: const TextStyle(
-                          color: Colors.grey,
-                          fontSize: 14,
-                          decoration: TextDecoration.lineThrough,
+                      if (oldPrice.isNotEmpty)
+                        Text(
+                          oldPrice,
+                          style: const TextStyle(
+                            color: Colors.grey,
+                            fontSize: 14,
+                            decoration: TextDecoration.lineThrough,
+                          ),
                         ),
-                      ),
                     ],
                   ),
                 ],
@@ -972,126 +896,6 @@ class _HomePageContentState extends State<HomePageContent> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  /// Widget untuk Testimonial Section
-  Widget _buildTestimonialSection() {
-    return Column(
-      children: [
-        _buildTitleBar(
-          "What Pet Lovers Say About Us?",
-          "See All",
-          onTap: () {
-            Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (_) => const ProductListPage()));
-          },
-        ),
-        SizedBox(
-          height: 240,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            children: [
-              _buildTestimonialCard(
-                name: "Kenneth Fong",
-                avatarPath: "assets/images/avatar/1.png",
-                review:
-                    "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book.",
-              ),
-              _buildTestimonialCard(
-                name: "Sarah Johnson",
-                avatarPath: "assets/images/avatar/2.png",
-                review:
-                    "Excellent service! My pet absolutely loves the products. The quality is outstanding and delivery was super fast. Highly recommended for all pet owners!",
-              ),
-              _buildTestimonialCard(
-                name: "Mike Chen",
-                avatarPath: "assets/images/avatar/3.png",
-                review:
-                    "Great experience shopping here. The staff is knowledgeable and the prices are very competitive. Will definitely come back for more!",
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 20),
-      ],
-    );
-  }
-
-  Widget _buildTestimonialCard({
-    required String name,
-    required String avatarPath,
-    required String review,
-  }) {
-    return Container(
-      width: 300,
-      margin: const EdgeInsets.only(right: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade300),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.shade200,
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(25),
-                child: Image.asset(
-                  avatarPath,
-                  width: 50,
-                  height: 50,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.person, size: 30),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  name,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              Icon(Icons.pets, color: Theme.of(context).primaryColor, size: 24),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Expanded(
-            child: Text(
-              review,
-              style: const TextStyle(
-                fontSize: 13,
-                color: Colors.black87,
-                height: 1.4,
-              ),
-              maxLines: 6,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -1119,30 +923,46 @@ class _HomePageContentState extends State<HomePageContent> {
             mainAxisSpacing: 10,
             childAspectRatio: 0.75,
             children: [
-              _buildProductCard(
-                "Dog Body Belt",
-                "\$80",
-                "\$95",
-                "assets/belt_product.jpg",
-              ),
-              _buildProductCard(
-                "Dog Cloths",
-                "\$80",
-                "\$95",
-                "assets/cloths_product.jpg",
-              ),
-              _buildProductCard(
-                "Pet Bed For Dog",
-                "\$80",
-                "\$95",
-                "assets/bed_product.jpg",
-              ),
-              _buildProductCard(
-                "Dog Chew Toys",
-                "\$80",
-                "\$95",
-                "assets/chew_toys_product.jpg",
-              ),
+              _buildProductCard({
+                'name': "Dog Body Belt",
+                'price': "80",
+                'old_price': "95",
+                'image_url': "assets/belt_product.jpg",
+                'category': 'Accessories',
+                'description': 'High quality dog belt',
+                'reviews_count': 100,
+                'id': 'dummy_1',
+              }),
+              _buildProductCard({
+                'name': "Dog Cloths",
+                'price': "80",
+                'old_price': "95",
+                'image_url': "assets/cloths_product.jpg",
+                'category': 'Clothing',
+                'description': 'Warm clothes for your dog',
+                'reviews_count': 50,
+                'id': 'dummy_2',
+              }),
+              _buildProductCard({
+                'name': "Pet Bed For Dog",
+                'price': "80",
+                'old_price': "95",
+                'image_url': "assets/bed_product.jpg",
+                'category': 'Bedding',
+                'description': 'Comfortable bed for pets',
+                'reviews_count': 200,
+                'id': 'dummy_3',
+              }),
+              _buildProductCard({
+                'name': "Dog Chew Toys",
+                'price': "80",
+                'old_price': "95",
+                'image_url': "assets/chew_toys_product.jpg",
+                'category': 'Toys',
+                'description': 'Durable chew toys',
+                'reviews_count': 150,
+                'id': 'dummy_4',
+              }),
             ],
           ),
         ),
@@ -1151,8 +971,73 @@ class _HomePageContentState extends State<HomePageContent> {
     );
   }
 
-  /// Widget untuk Items In Your Cart Section
   Widget _buildCartSection() {
+    if (_isLoadingCart) {
+      return Container(
+        height: 200,
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.shade200,
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_cartItems.isEmpty) {
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.shade200,
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            const Text(
+              "Shop now to add items in your cart",
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(
+                  context,
+                ).push(
+                    MaterialPageRoute(builder: (_) => const ProductListPage()));
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.black,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Text("Shop Now"),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       padding: const EdgeInsets.all(20),
@@ -1194,32 +1079,23 @@ class _HomePageContentState extends State<HomePageContent> {
             ],
           ),
           const SizedBox(height: 16),
-          _buildCartItem(
-            "Dog Cloths",
-            "\$80",
-            "\$95",
-            "assets/cloths_product.jpg",
-            quantity: 1,
-            reviews: "2k Review",
-          ),
-          const Divider(height: 24),
-          _buildCartItem(
-            "Pet Bed For Dog",
-            "\$80",
-            "\$95",
-            "assets/bed_product.jpg",
-            quantity: 1,
-            reviews: "2k Review",
-          ),
-          const Divider(height: 24),
-          _buildCartItem(
-            "Dog Chew Toys",
-            "\$80",
-            "\$95",
-            "assets/chew_toys_product.jpg",
-            quantity: 1,
-            reviews: "2k Review",
-          ),
+          ..._cartItems.map((item) {
+            final product = item['products'] as Map<String, dynamic>;
+            return Column(
+              children: [
+                _buildCartItem(
+                  product['name'] ?? 'Unknown',
+                  "\$${product['price']}",
+                  product['old_price'] != null
+                      ? "\$${product['old_price']}"
+                      : "",
+                  product['image_url'] ?? "",
+                  quantity: item['quantity'] ?? 1,
+                ),
+                const Divider(height: 24),
+              ],
+            );
+          }),
           const SizedBox(height: 20),
           SizedBox(
             width: double.infinity,
@@ -1237,9 +1113,12 @@ class _HomePageContentState extends State<HomePageContent> {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: const Text(
-                "Proceed To Checkout (3)",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              child: Text(
+                "Proceed To Checkout (${_cartItems.length})",
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ),
@@ -1254,24 +1133,36 @@ class _HomePageContentState extends State<HomePageContent> {
     String oldPrice,
     String imagePath, {
     required int quantity,
-    required String reviews,
   }) {
     return Row(
       children: [
         ClipRRect(
           borderRadius: BorderRadius.circular(12),
-          child: Image.asset(
-            imagePath,
-            width: 70,
-            height: 70,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) => Container(
-              width: 70,
-              height: 70,
-              color: Colors.grey.shade200,
-              child: const Icon(Icons.pets, size: 30, color: Colors.grey),
-            ),
-          ),
+          child: imagePath.startsWith('http')
+              ? Image.network(
+                  imagePath,
+                  width: 70,
+                  height: 70,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    width: 70,
+                    height: 70,
+                    color: Colors.grey.shade200,
+                    child: const Icon(Icons.pets, size: 30, color: Colors.grey),
+                  ),
+                )
+              : Image.asset(
+                  imagePath,
+                  width: 70,
+                  height: 70,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    width: 70,
+                    height: 70,
+                    color: Colors.grey.shade200,
+                    child: const Icon(Icons.pets, size: 30, color: Colors.grey),
+                  ),
+                ),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -1297,21 +1188,15 @@ class _HomePageContentState extends State<HomePageContent> {
                     ),
                   ),
                   const SizedBox(width: 6),
-                  Text(
-                    oldPrice,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey,
-                      decoration: TextDecoration.lineThrough,
+                  if (oldPrice.isNotEmpty)
+                    Text(
+                      oldPrice,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey,
+                        decoration: TextDecoration.lineThrough,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  const Icon(Icons.star, color: Colors.amber, size: 14),
-                  const SizedBox(width: 2),
-                  Text(
-                    reviews,
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
                 ],
               ),
               const SizedBox(height: 4),
@@ -1328,287 +1213,6 @@ class _HomePageContentState extends State<HomePageContent> {
           color: Colors.grey,
         ),
       ],
-    );
-  }
-
-  /// Widget untuk Popular Nearby Section
-  Widget _buildPopularNearbySection() {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "Popular Nearby",
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    "Up to 60% off + up to \$107 casHACK",
-                    style: TextStyle(fontSize: 13, color: Colors.grey),
-                  ),
-                ],
-              ),
-              InkWell(
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const ProductListPage()),
-                  );
-                },
-                child: Text(
-                  "See All",
-                  style: TextStyle(color: Theme.of(context).primaryColor),
-                ),
-              ),
-            ],
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisSpacing: 10,
-            mainAxisSpacing: 10,
-            childAspectRatio: 0.85,
-            children: [
-              _buildPopularNearbyCard(
-                "Beagle",
-                "Special Offer",
-                "assets/beagle.jpg",
-                Colors.orange.shade100,
-              ),
-              _buildPopularNearbyCard(
-                "Labrador",
-                "Min. 70% Off",
-                "assets/labrador.jpeg",
-                Colors.teal.shade100,
-              ),
-              _buildPopularNearbyCard(
-                "Golden Retriever",
-                "Best Price",
-                "assets/golden_retriever.jpg",
-                Colors.red.shade100,
-              ),
-              _buildPopularNearbyCard(
-                "Poodle",
-                "Limited Offer",
-                "assets/poodle.jpg",
-                Colors.pink.shade100,
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 20),
-      ],
-    );
-  }
-
-  Widget _buildPopularNearbyCard(
-    String title,
-    String subtitle,
-    String imagePath,
-    Color backgroundColor,
-  ) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                color: backgroundColor,
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(16),
-                ),
-              ),
-              child: Center(
-                child: Image.asset(
-                  imagePath,
-                  height: 120,
-                  fit: BoxFit.contain,
-                  errorBuilder: (context, error, stackTrace) =>
-                      Icon(Icons.pets, size: 80, color: Colors.grey.shade400),
-                ),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Theme.of(context).primaryColor,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Widget untuk Blockbuster Deals Section
-  Widget _buildBlockbusterDealsSection() {
-    return Column(
-      children: [
-        _buildTitleBar(
-          "Blockbuster Deals",
-          "See All Deals",
-          onTap: () {
-            Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (_) => const ProductListPage()));
-          },
-        ),
-        // Main Featured Product
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.shade200,
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Product Image
-                Container(
-                  height: 200,
-                  decoration: BoxDecoration(
-                    color: Colors.orange.shade50,
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(16),
-                    ),
-                  ),
-                  child: Center(
-                    child: Image.asset(
-                      'assets/belt_product.jpg',
-                      height: 180,
-                      fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) => Icon(
-                        Icons.pets,
-                        size: 100,
-                        color: Colors.grey.shade400,
-                      ),
-                    ),
-                  ),
-                ),
-                // Product Details
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.red.shade50,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          "Up To 79% Off",
-                          style: TextStyle(
-                            color: Colors.red.shade700,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      const Text(
-                        "Fresh & Fit: Raw Food Diet For Dogs",
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-        // Horizontal Scrolling Products
-        SizedBox(
-          height: 100,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            children: [
-              _buildSmallProductCard('assets/dog.jpg', Colors.orange.shade50),
-              _buildSmallProductCard('assets/cat.jpg', Colors.pink.shade50),
-              _buildSmallProductCard('assets/rabbit.jpg', Colors.blue.shade50),
-              _buildSmallProductCard(
-                'assets/parrot.jpg',
-                Colors.orange.shade50,
-              ),
-              _buildSmallProductCard('assets/dog.jpg', Colors.teal.shade50),
-            ],
-          ),
-        ),
-        const SizedBox(height: 20),
-      ],
-    );
-  }
-
-  Widget _buildSmallProductCard(String imagePath, Color backgroundColor) {
-    return Container(
-      width: 80,
-      margin: const EdgeInsets.only(right: 12),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade300, width: 1),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: Image.asset(
-          imagePath,
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) =>
-              Icon(Icons.pets, size: 40, color: Colors.grey.shade400),
-        ),
-      ),
     );
   }
 
@@ -1792,35 +1396,58 @@ class _HomePageContentState extends State<HomePageContent> {
         ),
         SizedBox(
           height: 140,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            children: [
-              _buildFeaturedNowCard(
-                "Russell Terrier",
-                "\$80",
-                "\$95",
-                "40% Off",
-                "2k Review",
-                "assets/russel.png",
-              ),
-              _buildFeaturedNowCard(
-                "Labrador",
-                "\$80",
-                "\$95",
-                "40% Off",
-                "2k Review",
-                "assets/labrador.jpeg",
-              ),
-              _buildFeaturedNowCard(
-                "Golden Retriever",
-                "\$80",
-                "\$95",
-                "35% Off",
-                "1.8k Review",
-                "assets/golden_retriever.jpg",
-              ),
-            ],
+          child: FutureBuilder<List<Map<String, dynamic>>>(
+            future: DataService().getProducts(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError || !snapshot.hasData) {
+                return const SizedBox();
+              }
+
+              var products = snapshot.data!;
+
+              var discountedProducts = products.where((p) {
+                final price = (p['price'] as num).toDouble();
+                final oldPrice = (p['old_price'] as num?)?.toDouble() ?? 0;
+                return oldPrice > price;
+              }).toList();
+
+              discountedProducts.sort((a, b) {
+                final priceA = (a['price'] as num).toDouble();
+                final oldPriceA = (a['old_price'] as num).toDouble();
+                final pctA = (oldPriceA - priceA) / oldPriceA;
+
+                final priceB = (b['price'] as num).toDouble();
+                final oldPriceB = (b['old_price'] as num).toDouble();
+                final pctB = (oldPriceB - priceB) / oldPriceB;
+
+                return pctB.compareTo(pctA);
+              });
+
+              if (discountedProducts.isEmpty) {
+                return const Center(child: Text("No featured offers"));
+              }
+
+              return ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: discountedProducts.take(5).length,
+                itemBuilder: (context, index) {
+                  final product = discountedProducts[index];
+                  final price = (product['price'] as num).toDouble();
+                  final oldPrice = (product['old_price'] as num).toDouble();
+                  final percentOff =
+                      ((oldPrice - price) / oldPrice * 100).round();
+
+                  final displayProduct = Map<String, dynamic>.from(product);
+                  displayProduct['discount_display'] = "$percentOff% Off";
+
+                  return _buildFeaturedNowCard(displayProduct);
+                },
+              );
+            },
           ),
         ),
         const SizedBox(height: 20),
@@ -1828,14 +1455,26 @@ class _HomePageContentState extends State<HomePageContent> {
     );
   }
 
-  Widget _buildFeaturedNowCard(
-    String title,
-    String price,
-    String oldPrice,
-    String discount,
-    String reviews,
-    String imagePath,
-  ) {
+  Widget _buildFeaturedNowCard(Map<String, dynamic> product) {
+    final String title = product['name'] ?? 'Unknown';
+    final String price = "\$${product['price']}";
+    final String oldPrice = "\$${product['old_price']}";
+    final String discount = product['discount_display'] ?? "Offer";
+    final String reviews = "${product['reviews_count'] ?? 0} Review";
+    final String imagePath = product['image_url'] ?? "";
+
+    // Map for details
+    final Map<String, dynamic> productForDetail = {
+      'id': product['id'],
+      'name': title,
+      'price': product['price'],
+      'oldPrice': product['old_price'],
+      'imagePath': imagePath,
+      'category': product['category'],
+      'description': product['description'],
+      'review': product['reviews_count'],
+    };
+
     return Container(
       width: 260,
       margin: const EdgeInsets.only(right: 16),
@@ -1844,100 +1483,121 @@ class _HomePageContentState extends State<HomePageContent> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.grey.shade300),
       ),
-      child: Row(
-        children: [
-          // Image
-          Container(
-            width: 80,
-            height: 80,
-            margin: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.red.shade50,
-              borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => ProductDetailPage(product: productForDetail),
             ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.asset(
-                imagePath,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) =>
-                    Icon(Icons.pets, size: 40, color: Colors.grey.shade400),
+          );
+        },
+        child: Row(
+          children: [
+            // Image
+            Container(
+              width: 80,
+              height: 80,
+              margin: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: imagePath.startsWith('http')
+                    ? Image.network(
+                        imagePath,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => Icon(
+                            Icons.pets,
+                            size: 40,
+                            color: Colors.grey.shade400),
+                      )
+                    : Image.asset(
+                        imagePath,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => Icon(
+                            Icons.pets,
+                            size: 40,
+                            color: Colors.grey.shade400),
+                      ),
               ),
             ),
-          ),
-          // Details
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Text(
-                        price,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        oldPrice,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey,
-                          decoration: TextDecoration.lineThrough,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      const Icon(Icons.star, color: Colors.amber, size: 12),
-                      const SizedBox(width: 2),
-                      Text(
-                        reviews,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: Colors.grey,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.red.shade50,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      discount,
-                      style: TextStyle(
-                        color: Colors.red.shade700,
+            // Details
+            Expanded(
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 14,
                         fontWeight: FontWeight.bold,
-                        fontSize: 11,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Text(
+                          price,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          oldPrice,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey,
+                            decoration: TextDecoration.lineThrough,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        const Icon(Icons.star, color: Colors.amber, size: 12),
+                        const SizedBox(width: 2),
+                        Text(
+                          reviews,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade50,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        discount,
+                        style: TextStyle(
+                          color: Colors.red.shade700,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 11,
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -2285,137 +1945,6 @@ class _HomePageContentState extends State<HomePageContent> {
                     color: Colors.green.shade700,
                     fontWeight: FontWeight.w500,
                   ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Widget untuk Sponsored Section
-  Widget _buildSponsoredSection() {
-    return Column(
-      children: [
-        _buildTitleBar(
-          "Sponsored",
-          "See All",
-          onTap: () {
-            Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (_) => const ProductListPage()));
-          },
-        ),
-        SizedBox(
-          height: 200,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            children: [
-              _buildSponsoredCard(
-                "Pet Shop",
-                "Min. 30% Off",
-                "assets/pet_shop.jpeg",
-                Colors.pink.shade100,
-              ),
-              _buildSponsoredCard(
-                "Best Dog Food",
-                "Up To 20% Off",
-                "assets/dog_food.jpg",
-                Colors.orange.shade100,
-              ),
-              _buildSponsoredCard(
-                "Rabbit Food",
-                "Min. 30% Off",
-                "assets/rabbit_food.jpg",
-                Colors.orange.shade50,
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 20),
-      ],
-    );
-  }
-
-  Widget _buildSponsoredCard(
-    String title,
-    String subtitle,
-    String imagePath,
-    Color backgroundColor,
-  ) {
-    return Container(
-      width: 140,
-      margin: const EdgeInsets.only(right: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.shade200,
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Image
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                color: backgroundColor,
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(16),
-                ),
-              ),
-              child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(16),
-                ),
-                child: Image.asset(
-                  imagePath,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Center(
-                    child: Icon(
-                      Icons.pets,
-                      size: 60,
-                      color: Colors.grey.shade400,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          // Details
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey.shade700,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
                 ),
               ],
             ),

@@ -434,23 +434,43 @@ class _CartItemCardState extends State<CartItemCard> {
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(12.0),
-            child: Image.asset(
-              widget.imagePath,
-              width: 100,
-              height: 100,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  width: 100,
-                  height: 100,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                    borderRadius: BorderRadius.circular(12.0),
+            child: widget.imagePath.startsWith('http')
+                ? Image.network(
+                    widget.imagePath,
+                    width: 100,
+                    height: 100,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        width: 100,
+                        height: 100,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[200],
+                          borderRadius: BorderRadius.circular(12.0),
+                        ),
+                        child: const Icon(Icons.pets,
+                            size: 40, color: Colors.grey),
+                      );
+                    },
+                  )
+                : Image.asset(
+                    widget.imagePath,
+                    width: 100,
+                    height: 100,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        width: 100,
+                        height: 100,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[200],
+                          borderRadius: BorderRadius.circular(12.0),
+                        ),
+                        child: const Icon(Icons.pets,
+                            size: 40, color: Colors.grey),
+                      );
+                    },
                   ),
-                  child: const Icon(Icons.pets, size: 40, color: Colors.grey),
-                );
-              },
-            ),
           ),
           const SizedBox(width: 16.0),
           Expanded(

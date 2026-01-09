@@ -98,11 +98,15 @@ class DataService {
 
   // --- PRODUCTS ---
 
-  Future<List<Map<String, dynamic>>> getProducts({String? category}) async {
+  Future<List<Map<String, dynamic>>> getProducts(
+      {String? category, String? petCategory}) async {
     try {
       var query = _supabase.from('products').select();
       if (category != null && category != 'All') {
         query = query.eq('category', category);
+      }
+      if (petCategory != null) {
+        query = query.eq('pet_category', petCategory);
       }
       return List<Map<String, dynamic>>.from(await query);
     } catch (e) {
@@ -151,17 +155,33 @@ class DataService {
   // --- CART ---
 
   Future<List<Map<String, dynamic>>> getCartItems() async {
+    print("DEBUG: getCartItems called");
     final user = _supabase.auth.currentUser;
-    if (user == null) return [];
+    if (user == null) {
+      print("DEBUG: User is null");
+      return [];
+    }
+    print("DEBUG: User ID: ${user.id}");
 
     try {
+      print("DEBUG: Executing Supabase query...");
       final data = await _supabase
           .from('cart_items')
           .select('*, products(*)')
-          .eq('user_id', user.id);
-      return List<Map<String, dynamic>>.from(data);
+          .eq('user_id', user.id)
+          .timeout(const Duration(seconds: 10));
+      print("DEBUG: Query result received (length: ${data.length})");
+      try {
+        final List<Map<String, dynamic>> typedList =
+            (data as List).map((item) => item as Map<String, dynamic>).toList();
+        print("DEBUG: Returning typed list");
+        return typedList;
+      } catch (castError) {
+        print("DEBUG: Error casting data: $castError");
+        return [];
+      }
     } catch (e) {
-      print('Error fetching cart: $e');
+      print('DEBUG: Error fetching cart: $e');
       return [];
     }
   }
@@ -528,6 +548,7 @@ class DataService {
       throw Exception('Failed to submit review: $e');
     }
   }
+
   Future<List<Map<String, dynamic>>> getUserReviews() async {
     final user = _supabase.auth.currentUser;
     if (user == null) return [];
@@ -556,22 +577,28 @@ class DataService {
     if (user == null) throw Exception('Must be logged in to update a review');
 
     print('DEBUG: Attemption to update review $reviewId by user ${user.id}');
-    print('DEBUG: New Data - Rating: $rating, Title: $title, Comment: $comment');
+    print(
+        'DEBUG: New Data - Rating: $rating, Title: $title, Comment: $comment');
 
     try {
-      final response = await _supabase.from('reviews').update({
-        'rating': rating,
-        'title': title,
-        'comment': comment,
-        'is_recommended': isRecommended,
-        // 'updated_at': DateTime.now().toIso8601String(), // Good practice if column exists
-      }).eq('id', reviewId).select();
-      
+      final response = await _supabase
+          .from('reviews')
+          .update({
+            'rating': rating,
+            'title': title,
+            'comment': comment,
+            'is_recommended': isRecommended,
+            // 'updated_at': DateTime.now().toIso8601String(), // Good practice if column exists
+          })
+          .eq('id', reviewId)
+          .select();
+
       print('DEBUG: Update response: $response');
-      
+
       if (response.isEmpty) {
         print('WARNING: No rows updated! Check RLS or if reviewId matches.');
-        throw Exception('Review update failed: Review not found or permission denied.');
+        throw Exception(
+            'Review update failed: Review not found or permission denied.');
       }
     } catch (e) {
       print('ERROR: Update failed with exception: $e');

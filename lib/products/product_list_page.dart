@@ -12,7 +12,14 @@ import 'widgets/sort_bottom_sheet.dart';
 import 'widgets/filter_bottom_sheet.dart';
 
 class ProductListPage extends StatefulWidget {
-  const ProductListPage({super.key});
+  final String? initialPetCategory;
+  final String? initialFilterCategory;
+
+  const ProductListPage({
+    super.key,
+    this.initialPetCategory,
+    this.initialFilterCategory,
+  });
 
   @override
   State<ProductListPage> createState() => _ProductListPageState();
@@ -20,6 +27,7 @@ class ProductListPage extends StatefulWidget {
 
 class _ProductListPageState extends State<ProductListPage> {
   bool _isListView = false;
+  String? _selectedPetCategory;
 
   // --- 1. TAMBAHAN: State untuk mengelola filter chips ---
   final List<String> _filterCategories = [
@@ -39,17 +47,45 @@ class _ProductListPageState extends State<ProductListPage> {
   final DataService _dataService = DataService();
   List<Map<String, dynamic>> products = [];
   bool _isLoading = true;
+  int _cartItemCount = 0;
 
   @override
   void initState() {
     super.initState();
+    if (widget.initialPetCategory != null) {
+      _selectedFilterCategory = 'Pet';
+      _selectedPetCategory = widget.initialPetCategory;
+    } else if (widget.initialFilterCategory != null) {
+      _selectedFilterCategory = widget.initialFilterCategory!;
+    }
     _loadProducts();
+    _fetchCartCount();
+  }
+
+  Future<void> _fetchCartCount() async {
+    try {
+      final items = await _dataService.getCartItems();
+      int total = 0;
+      for (var item in items) {
+        total += (item['quantity'] as num).toInt();
+      }
+      if (mounted) {
+        setState(() {
+          _cartItemCount = total;
+        });
+      }
+    } catch (e) {
+      print("Error fetching cart count: $e");
+    }
   }
 
   Future<void> _loadProducts() async {
     // Pass 'All' as null or handle in service (service handles 'All' string check, but let's be safe)
-    final fetchedProducts =
-        await _dataService.getProducts(category: _selectedFilterCategory);
+    final fetchedProducts = await _dataService.getProducts(
+      category: _selectedFilterCategory,
+      petCategory:
+          _selectedFilterCategory == 'Pet' ? _selectedPetCategory : null,
+    );
     if (mounted) {
       setState(() {
         products = fetchedProducts
@@ -153,6 +189,7 @@ class _ProductListPageState extends State<ProductListPage> {
                   if (result == true) {
                     _loadProducts();
                   }
+                  _fetchCartCount(); // Refresh cart count regardless
                 },
                 child: ProductListRow(product: product),
               ),
@@ -257,23 +294,25 @@ class _ProductListPageState extends State<ProductListPage> {
                 ).push(MaterialPageRoute(builder: (_) => const CartScreen()));
               },
             ),
-            Positioned(
-              right: 5,
-              top: 5,
-              child: Container(
-                padding: const EdgeInsets.all(2),
-                decoration: BoxDecoration(
-                  color: Colors.red,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                constraints: const BoxConstraints(minWidth: 15, minHeight: 15),
-                child: const Text(
-                  '14',
-                  style: TextStyle(color: Colors.white, fontSize: 8),
-                  textAlign: TextAlign.center,
+            if (_cartItemCount > 0)
+              Positioned(
+                right: 5,
+                top: 5,
+                child: Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  constraints:
+                      const BoxConstraints(minWidth: 15, minHeight: 15),
+                  child: Text(
+                    '$_cartItemCount',
+                    style: const TextStyle(color: Colors.white, fontSize: 8),
+                    textAlign: TextAlign.center,
+                  ),
                 ),
               ),
-            ),
           ],
         ),
         const SizedBox(width: 8),
@@ -323,6 +362,17 @@ class _ProductListPageState extends State<ProductListPage> {
                   // Update state saat chip ditekan
                   setState(() {
                     _selectedFilterCategory = category;
+                    // Reset specific pet category if switching away or to generic Pet (optional, for now reset)
+                    if (category != 'Pet') {
+                      _selectedPetCategory = null;
+                    }
+                    // If clicking 'Pet', we might want to keep previous selection or show all.
+                    // Let's show all for now if manually clicked, unless we want a sub-filter UI (out of scope)
+                    if (category == 'Pet' &&
+                        widget.initialPetCategory == null) {
+                      _selectedPetCategory = null;
+                    }
+
                     _loadProducts();
                     // untuk memfilter daftar 'products' berdasarkan 'category'
                   });

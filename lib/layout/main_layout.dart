@@ -4,6 +4,7 @@ import '../wishlist/wishlist_screen.dart';
 import '../cart/cart_screen.dart';
 import '../category/category_screen.dart';
 import '../profile/profile_screen.dart';
+import '../services/api_service.dart';
 
 /// Main Layout Component - Similar to Layout in Next.js
 /// Manages bottom navigation and screen switching
@@ -16,6 +17,7 @@ class MainLayout extends StatefulWidget {
 
 class MainLayoutState extends State<MainLayout> {
   int _selectedIndex = 0;
+  int _cartItemCount = 0;
 
   // List of screens to display
   // GlobalKey for CartScreen
@@ -26,6 +28,7 @@ class MainLayoutState extends State<MainLayout> {
   @override
   void initState() {
     super.initState();
+    _fetchCartCount();
     _screens = [
       const HomePageContent(),
       const WishlistScreen(),
@@ -33,6 +36,23 @@ class MainLayoutState extends State<MainLayout> {
       const CategoryScreen(),
       const ProfileScreen(),
     ];
+  }
+
+  Future<void> _fetchCartCount() async {
+    try {
+      final items = await DataService().getCartItems();
+      int total = 0;
+      for (var item in items) {
+        total += (item['quantity'] as num).toInt();
+      }
+      if (mounted) {
+        setState(() {
+          _cartItemCount = total;
+        });
+      }
+    } catch (e) {
+      print("Error fetching cart count in MainLayout: $e");
+    }
   }
 
   // Public method to switch tabs from child widgets
@@ -44,6 +64,8 @@ class MainLayoutState extends State<MainLayout> {
     setState(() {
       _selectedIndex = index;
     });
+    // Refresh cart count on tab switch
+    _fetchCartCount();
     // If Cart tab (index 2) is tapped, refresh it
     if (index == 2) {
       _cartKey.currentState?.refresh();
@@ -76,25 +98,26 @@ class MainLayoutState extends State<MainLayout> {
           icon: Stack(
             children: [
               const Icon(Icons.shopping_cart_outlined),
-              Positioned(
-                right: 0,
-                child: Container(
-                  padding: const EdgeInsets.all(2),
-                  decoration: BoxDecoration(
-                    color: Colors.red,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  constraints: const BoxConstraints(
-                    minWidth: 12,
-                    minHeight: 12,
-                  ),
-                  child: const Text(
-                    '14',
-                    style: TextStyle(color: Colors.white, fontSize: 8),
-                    textAlign: TextAlign.center,
+              if (_cartItemCount > 0)
+                Positioned(
+                  right: 0,
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 12,
+                      minHeight: 12,
+                    ),
+                    child: Text(
+                      '$_cartItemCount',
+                      style: const TextStyle(color: Colors.white, fontSize: 8),
+                      textAlign: TextAlign.center,
+                    ),
                   ),
                 ),
-              ),
             ],
           ),
           activeIcon: const Icon(Icons.shopping_cart),

@@ -16,25 +16,36 @@ class ProductDetailPage extends StatefulWidget {
 
 class _ProductDetailPageState extends State<ProductDetailPage> {
   int _quantity = 1;
-  String _selectedSize = 'M';
-  int _selectedColorIndex = 0;
-
-  final List<String> _sizes = ['S', 'M', 'L', 'XL', '2XI'];
-  final List<Color> _colors = [
-    Colors.red.shade900,
-    Colors.brown.shade300,
-    Colors.grey.shade600,
-    Colors.purple,
-    Colors.green,
-  ];
+  int _cartItemCount = 0;
 
   bool get _isLoggedIn => Supabase.instance.client.auth.currentUser != null;
 
   @override
   void initState() {
     super.initState();
+    _fetchCartCount();
     // Debug: Print product data yang diterima dari list
     print('Product Data: ${widget.product}');
+  }
+
+  Future<void> _fetchCartCount() async {
+    try {
+      final items = await DataService().getCartItems();
+      print("DEBUG: _fetchCartCount items length: ${items.length}");
+      // Calculate total items (sum of quantities)
+      int total = 0;
+      for (var item in items) {
+        total += (item['quantity'] as num).toInt();
+      }
+      print("DEBUG: Calculated total cart count: $total");
+      if (mounted) {
+        setState(() {
+          _cartItemCount = total;
+        });
+      }
+    } catch (e) {
+      print("Error fetching cart count: $e");
+    }
   }
 
   @override
@@ -61,30 +72,31 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                   );
                 },
               ),
-              Positioned(
-                right: 8,
-                top: 8,
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: const BoxDecoration(
-                    color: Colors.red,
-                    shape: BoxShape.circle,
-                  ),
-                  constraints: const BoxConstraints(
-                    minWidth: 16,
-                    minHeight: 16,
-                  ),
-                  child: const Text(
-                    '14',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
+              if (_cartItemCount > 0)
+                Positioned(
+                  right: 8,
+                  top: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
                     ),
-                    textAlign: TextAlign.center,
+                    constraints: const BoxConstraints(
+                      minWidth: 16,
+                      minHeight: 16,
+                    ),
+                    child: Text(
+                      '$_cartItemCount',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
                   ),
                 ),
-              ),
             ],
           ),
           if (_isLoggedIn) ...[
@@ -101,7 +113,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                   'imagePath': widget.product['imagePath'],
                   'description': widget.product['description'],
                 };
-                
+
                 final result = await Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -112,9 +124,11 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
 
                 // Jika berhasil edit, kembali dan refresh
                 if (result == true && mounted) {
-                  Navigator.pop(context, true); // Return true untuk trigger refresh
+                  Navigator.pop(
+                      context, true); // Return true untuk trigger refresh
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Product updated successfully')),
+                    const SnackBar(
+                        content: Text('Product updated successfully')),
                   );
                 }
               },
@@ -158,10 +172,11 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
 
                     await DataService()
                         .deleteProduct(widget.product['id'].toString());
-                    
+
                     if (mounted) {
                       Navigator.pop(context); // Close loading
-                      Navigator.pop(context, true); // Return true untuk trigger refresh
+                      Navigator.pop(
+                          context, true); // Return true untuk trigger refresh
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           content: Text('Product deleted successfully'),
@@ -373,108 +388,6 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                   ),
                   const SizedBox(height: 24),
 
-                  // Size Selection
-                  Text(
-                    'Items Size:',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: _sizes.map((size) {
-                      final isSelected = _selectedSize == size;
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: GestureDetector(
-                          onTap: () => setState(() => _selectedSize = size),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 10,
-                            ),
-                            decoration: BoxDecoration(
-                              color: isSelected ? Colors.black : Colors.white,
-                              borderRadius: BorderRadius.circular(25),
-                              border: Border.all(
-                                color: isSelected
-                                    ? Colors.black
-                                    : Colors.grey.shade300,
-                                width: 1.5,
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                if (isSelected)
-                                  const Padding(
-                                    padding: EdgeInsets.only(right: 6),
-                                    child: Icon(
-                                      Icons.check,
-                                      color: Colors.white,
-                                      size: 16,
-                                    ),
-                                  ),
-                                Text(
-                                  size,
-                                  style: TextStyle(
-                                    color: isSelected
-                                        ? Colors.white
-                                        : Colors.black,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Color Selection
-                  Text(
-                    'Items Color:',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: List.generate(_colors.length, (index) {
-                      final isSelected = _selectedColorIndex == index;
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 12),
-                        child: GestureDetector(
-                          onTap: () =>
-                              setState(() => _selectedColorIndex = index),
-                          child: Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              color: _colors[index],
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: isSelected
-                                    ? Colors.black
-                                    : Colors.transparent,
-                                width: 2,
-                              ),
-                            ),
-                            child: isSelected
-                                ? const Icon(
-                                    Icons.check,
-                                    color: Colors.white,
-                                    size: 20,
-                                  )
-                                : null,
-                          ),
-                        ),
-                      );
-                    }),
-                  ),
                   const SizedBox(height: 24),
 
                   // Description
@@ -515,11 +428,14 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
           ],
         ),
         child: ElevatedButton(
-          onPressed: () {
-            DataService().addToCart(widget.product['id'].toString());
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Added to cart')),
-            );
+          onPressed: () async {
+            await DataService().addToCart(widget.product['id'].toString());
+            _fetchCartCount(); // Refresh count
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Added to cart')),
+              );
+            }
           },
           style: ElevatedButton.styleFrom(
             padding: const EdgeInsets.symmetric(vertical: 16),
