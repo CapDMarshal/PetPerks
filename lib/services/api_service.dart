@@ -605,4 +605,46 @@ class DataService {
       throw Exception('Failed to update review: $e');
     }
   }
+
+  // --- NOTIFICATIONS ---
+
+  Future<void> addNotification({
+    required String title,
+    required String message,
+    String type = 'system',
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return; // Fail silently if not logged in
+
+    try {
+      await _supabase.from('notifications').insert({
+        'user_id': user.id,
+        'title': title,
+        'message': message,
+        'type': type,
+        'created_at': DateTime.now().toIso8601String(),
+        'is_read': false,
+      });
+    } catch (e) {
+      print('Error adding notification: $e');
+      // Don't rethrow, notifications shouldn't block main flow
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getNotifications() async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return [];
+
+    try {
+      final data = await _supabase
+          .from('notifications')
+          .select()
+          .eq('user_id', user.id)
+          .order('created_at', ascending: false);
+      return List<Map<String, dynamic>>.from(data);
+    } catch (e) {
+      print('Error fetching notifications: $e');
+      return [];
+    }
+  }
 }

@@ -630,7 +630,7 @@ class _HomePageContentState extends State<HomePageContent> {
     return Column(
       children: [
         _buildTitleBar(
-          "Find Best Category",
+          "Find Best Pet For You",
           "See All",
           onTap: () {
             Navigator.of(

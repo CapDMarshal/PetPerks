@@ -53,14 +53,31 @@ class MidtransService {
         if (status == 'settlement' || status == 'capture') {
           // Success
           await _dataService.updateOrderStatus(orderId, 'paid');
+          // NOTIFICATION TRIGGER
+          await _dataService.addNotification(
+            title: 'Payment Successful',
+            message: 'Your order #$orderId has been paid successfully.',
+            type: 'order',
+          );
+
           _showSuccess(context, 'Payment Successful!');
           // Navigate to success screen or Orders
         } else if (status == 'pending') {
+          await _dataService.addNotification(
+            title: 'Payment Pending',
+            message: 'Your order #$orderId is pending payment.',
+            type: 'order',
+          );
           _showSuccess(context, 'Payment Pending...');
         } else {
           // Failed/Cancelled
           // Optionally update order to 'cancelled'
           await _dataService.updateOrderStatus(orderId, 'cancelled');
+          await _dataService.addNotification(
+            title: 'Payment Failed',
+            message: 'Payment for order #$orderId failed or was cancelled.',
+            type: 'order',
+          );
           _showError(context, 'Payment Failed or Cancelled');
         }
       } else {

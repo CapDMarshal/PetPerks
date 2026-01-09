@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../search/search_screen.dart';
+import '../services/api_service.dart';
 
 class NotificationScreen extends StatefulWidget {
   const NotificationScreen({super.key});
@@ -9,59 +10,20 @@ class NotificationScreen extends StatefulWidget {
 }
 
 class _NotificationScreenState extends State<NotificationScreen> {
-  // Sample notification data
-  final List<Map<String, dynamic>> notifications = [
-    {
-      'title': 'New Arrivals Alert!',
-      'date': '15 July 2023',
-      'avatar': 'assets/beagle.jpg',
-    },
-    {
-      'title': 'Flash Sale Announcement',
-      'date': '21 July 2023',
-      'avatar': 'assets/labrador.jpeg',
-    },
-    {
-      'title': 'Exclusive Discounts Inside',
-      'date': '10 March 2023',
-      'avatar': 'assets/poodle.jpg',
-    },
-    {
-      'title': 'Limited Stock - Act Fast!',
-      'date': '20 September 2023',
-      'avatar': 'assets/golden_retriever.jpg',
-    },
-    {
-      'title': 'Get Ready to Shop',
-      'date': '15 July 2023',
-      'avatar': 'assets/dog.jpg',
-    },
-    {
-      'title': 'Don\'t Miss Out on Savings',
-      'date': '24 July 2023',
-      'avatar': 'assets/beagle.jpg',
-    },
-    {
-      'title': 'Special Offer Just for You',
-      'date': '28 August 2023',
-      'avatar': 'assets/labrador.jpeg',
-    },
-    {
-      'title': 'Don\'t Miss Out on Savings',
-      'date': '15 July 2023',
-      'avatar': 'assets/poodle.jpg',
-    },
-    {
-      'title': 'Get Ready to Shop',
-      'date': '15 July 2023',
-      'avatar': 'assets/golden_retriever.jpg',
-    },
-    {
-      'title': 'Special Offer Just for You',
-      'date': '15 July 2023',
-      'avatar': 'assets/dog.jpg',
-    },
-  ];
+  final DataService _dataService = DataService();
+  late Future<List<Map<String, dynamic>>> _notificationsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadNotifications();
+  }
+
+  void _loadNotifications() {
+    setState(() {
+      _notificationsFuture = _dataService.getNotifications();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -75,7 +37,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          'Notifications (${notifications.length})',
+          'Notifications',
           style: const TextStyle(
             color: Colors.black,
             fontSize: 18,
@@ -95,41 +57,52 @@ class _NotificationScreenState extends State<NotificationScreen> {
           ),
         ],
       ),
-      body: ListView.separated(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        itemCount: notifications.length,
-        separatorBuilder: (context, index) => const Divider(
-          height: 1,
-          indent: 76,
-          endIndent: 16,
-        ),
-        itemBuilder: (context, index) {
-          final notification = notifications[index];
-          return Dismissible(
-            key: Key('notification_$index'),
-            direction: DismissDirection.endToStart,
-            background: Container(
-              alignment: Alignment.centerRight,
-              padding: const EdgeInsets.only(right: 20),
-              color: Colors.red,
-              child: const Icon(
-                Icons.delete,
-                color: Colors.white,
-                size: 28,
-              ),
+      body: FutureBuilder<List<Map<String, dynamic>>>(
+        future: _notificationsFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+
+          final notifications = snapshot.data ?? [];
+
+          if (notifications.isEmpty) {
+            return const Center(child: Text('No notifications yet.'));
+          }
+
+          return ListView.separated(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            itemCount: notifications.length,
+            separatorBuilder: (context, index) => const Divider(
+              height: 1,
+              indent: 76,
+              endIndent: 16,
             ),
-            onDismissed: (direction) {
-              setState(() {
-                notifications.removeAt(index);
-              });
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('${notification['title']} dismissed'),
-                  duration: const Duration(seconds: 2),
+            itemBuilder: (context, index) {
+              final notification = notifications[index];
+              return Dismissible(
+                key: Key('notification_${notification['id']}'),
+                direction: DismissDirection.endToStart,
+                background: Container(
+                  alignment: Alignment.centerRight,
+                  padding: const EdgeInsets.only(right: 20),
+                  color: Colors.red,
+                  child: const Icon(
+                    Icons.delete,
+                    color: Colors.white,
+                    size: 28,
+                  ),
                 ),
+                onDismissed: (direction) {
+                  // TODO: Implement delete API call if needed
+                },
+                child: _buildNotificationItem(notification),
               );
             },
-            child: _buildNotificationItem(notification),
           );
         },
       ),
@@ -137,21 +110,18 @@ class _NotificationScreenState extends State<NotificationScreen> {
   }
 
   Widget _buildNotificationItem(Map<String, dynamic> notification) {
+    // Format date properly in real app
+    final dateStr = notification['created_at']?.toString().split('T')[0] ?? '';
+
     return InkWell(
       onTap: () {
         // Handle notification tap
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Opened: ${notification['title']}'),
-            duration: const Duration(seconds: 1),
-          ),
-        );
       },
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
           children: [
-            // Avatar
+            // Avatar (Generic for now)
             Container(
               width: 60,
               height: 60,
@@ -159,21 +129,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                 borderRadius: BorderRadius.circular(12),
                 color: Colors.grey.shade200,
               ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.asset(
-                  notification['avatar'],
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    color: Colors.grey.shade300,
-                    child: Icon(
-                      Icons.pets,
-                      color: Colors.grey.shade600,
-                      size: 30,
-                    ),
-                  ),
-                ),
-              ),
+              child: const Icon(Icons.notifications, color: Colors.grey),
             ),
             const SizedBox(width: 12),
             // Content
@@ -182,7 +138,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    notification['title'],
+                    notification['title'] ?? 'Notification',
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
@@ -193,10 +149,20 @@ class _NotificationScreenState extends State<NotificationScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    notification['date'],
+                    notification['message'] ?? '',
                     style: TextStyle(
                       fontSize: 13,
                       color: Colors.grey.shade600,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    dateStr,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.grey.shade400,
                     ),
                   ),
                 ],

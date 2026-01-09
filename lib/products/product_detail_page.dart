@@ -431,6 +431,12 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
           onPressed: () async {
             await DataService().addToCart(widget.product['id'].toString());
             _fetchCartCount(); // Refresh count
+            // NOTIFICATION TRIGGER
+            await DataService().addNotification(
+              title: 'Added to Cart',
+              message: 'Added ${widget.product['name']} to your cart.',
+              type: 'system',
+            );
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Added to cart')),
